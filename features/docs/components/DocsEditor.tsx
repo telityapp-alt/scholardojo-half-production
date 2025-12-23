@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -57,6 +57,8 @@ export const DocsEditor: React.FC = () => {
 
     const [doc, setDoc] = useState<DojoDoc | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const saveTimerRef = useRef<any>(null);
+    
     const [activeAiTab, setActiveAiTab] = useState<'AUDIT' | 'REFINE' | 'SUGGEST' | 'BLOCKS'>('AUDIT');
     const [selectedProgram, setSelectedProgram] = useState<UnifiedProgram | null>(null);
     const [selectedBlueprint, setSelectedBlueprint] = useState<DocBrief | null>(null);
@@ -88,7 +90,6 @@ export const DocsEditor: React.FC = () => {
                 const p = UnifiedProgramService.getById(data.linkedProgramId);
                 if (p) {
                     setSelectedProgram(p);
-                    // Automatic back-matching if possible
                     const b = p.shadowProtocol.docBriefs.find(brief => brief.id === data.type.toLowerCase()) || null;
                     setSelectedBlueprint(b);
                 }
@@ -97,15 +98,27 @@ export const DocsEditor: React.FC = () => {
         }
     }, [docId, editor]);
 
+    useEffect(() => {
+        return () => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, []);
+
     const handleSave = () => {
         if (!doc || !editor) return;
         setIsSaving(true);
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        
         DocsService.save({ 
             ...doc, 
             content: editor.getHTML(), 
             linkedProgramId: selectedProgram?.id 
         });
-        setTimeout(() => setIsSaving(false), 600);
+        
+        saveTimerRef.current = setTimeout(() => {
+            setIsSaving(false);
+        }, 600);
+        
         confetti({ particleCount: 30, spread: 40, origin: { x: 0.1, y: 0.1 } });
     };
 

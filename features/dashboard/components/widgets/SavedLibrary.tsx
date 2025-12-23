@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DomainType } from '../../../../core/contracts/entityMap';
 import { SaveService, SavedRecord, SavedItemType } from '../../../../core/access/saveAccess';
 import { Heart, Trash2, ArrowRight, Library, Zap, GraduationCap, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useStorageSync } from '../../../../core/hooks/useStorageSync';
 
 interface SavedLibraryProps {
     domain: DomainType;
@@ -14,16 +15,16 @@ export const SavedLibrary: React.FC<SavedLibraryProps> = ({ domain }) => {
     const [records, setRecords] = useState<SavedRecord[]>([]);
     const [activeTab, setActiveTab] = useState<SavedItemType | 'ALL'>('ALL');
 
-    const loadRecords = () => {
+    const loadRecords = useCallback(() => {
         setRecords(SaveService.getByDomain(domain));
-    };
+    }, [domain]);
 
     useEffect(() => {
         loadRecords();
-        // Listen for internal storage events triggered by SaveService
-        window.addEventListener('storage', loadRecords);
-        return () => window.removeEventListener('storage', loadRecords);
-    }, [domain]);
+    }, [loadRecords]);
+
+    // Memory-safe cross-tab sync
+    useStorageSync(loadRecords);
 
     const handleRemove = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();

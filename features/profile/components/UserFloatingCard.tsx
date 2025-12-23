@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
     ChevronDown, Crown, Flame, Gem, Fingerprint, 
     Zap, Target, BrainCircuit, ShieldCheck, User
@@ -10,6 +10,7 @@ import { DomainType } from '../../../core/contracts/entityMap';
 import { ProfileAccess } from '../../../core/access/profileAccess';
 import { getQuestsByDomain } from '../../../core/access/questAccess';
 import { AutoQuestEngine } from '../../../core/engines/autoQuestEngine';
+import { useStorageSync } from '../../../core/hooks/useStorageSync';
 
 export const UserFloatingCard: React.FC = () => {
     const { domain } = useParams<{ domain: string }>();
@@ -21,17 +22,18 @@ export const UserFloatingCard: React.FC = () => {
     
     const [activeQuests, setActiveQuests] = useState<any[]>([]);
 
-    const refreshIntelligence = () => {
+    const refreshIntelligence = useCallback(() => {
         const quests = getQuestsByDomain(domainEnum).filter(q => q.columnId !== 'done');
         setActiveQuests(quests);
         AutoQuestEngine.syncQuestsWithPrograms(domainEnum);
-    };
+    }, [domainEnum]);
 
     useEffect(() => {
         refreshIntelligence();
-        window.addEventListener('storage', refreshIntelligence);
-        return () => window.removeEventListener('storage', refreshIntelligence);
-    }, [domainEnum]);
+    }, [refreshIntelligence]);
+
+    // High performance cross-tab sync
+    useStorageSync(refreshIntelligence);
 
     const nextObjective = activeQuests[0]?.subtasks.find((s: any) => !s.completed)?.text || "Ecosystem Synchronized";
 

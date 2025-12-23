@@ -9,6 +9,7 @@ import { QuestCard } from '../../../quest/types';
 import { 
     CheckSquare, Flag, Map, BookOpen, Plus, Zap, Check, ChevronDown
 } from 'lucide-react';
+import { useStorageSync } from '../../../../core/hooks/useStorageSync';
 
 type Tab = 'ADMISSION' | 'ROADMAP' | 'QUESTS';
 
@@ -31,9 +32,10 @@ export const MissionCenter: React.FC<{ analysis: TargetAnalysis, onTaskComplete?
 
     useEffect(() => {
         loadQuests();
-        window.addEventListener('storage', loadQuests);
-        return () => window.removeEventListener('storage', loadQuests);
     }, [loadQuests]);
+
+    // Unified cross-tab synchronization
+    useStorageSync(loadQuests);
 
     const TabButton = ({ id, label, icon: Icon }: any) => {
         const isActive = activeTab === id;

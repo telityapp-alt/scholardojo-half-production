@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { DomainType } from '../../../core/contracts/entityMap';
 import { ForgeService, MasterProgram } from '../services/forgeService';
 import { ProgramForgeContainer } from './ProgramForgeContainer';
 import { Plus, Trash2, Edit3, Database, Hammer } from 'lucide-react';
+import { useStorageSync } from '../../../core/hooks/useStorageSync';
 
 export const ForgeView: React.FC = () => {
     const { domain } = useParams<{ domain: string }>();
@@ -12,13 +13,16 @@ export const ForgeView: React.FC = () => {
     const [programs, setPrograms] = useState<MasterProgram[]>([]);
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    const load = () => setPrograms(ForgeService.getAll().filter(p => p.domain === domainEnum));
+    const load = useCallback(() => {
+        setPrograms(ForgeService.getAll().filter(p => p.domain === domainEnum));
+    }, [domainEnum]);
 
     useEffect(() => {
         load();
-        window.addEventListener('storage', load);
-        return () => window.removeEventListener('storage', load);
-    }, [domainEnum]);
+    }, [load]);
+
+    // Centralized sync
+    useStorageSync(load);
 
     if (editingId) {
         return <ProgramForgeContainer 

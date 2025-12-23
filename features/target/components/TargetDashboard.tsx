@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TargetService } from '../services/targetService';
 import { TargetAnalysis } from '../types';
@@ -13,6 +13,7 @@ import { ProfileAccess } from '../../../core/access/profileAccess';
 import { ArrowLeft, RefreshCw, Target, Sparkles, Clock, Zap } from 'lucide-react';
 import { DomainType } from '../../../core/contracts/entityMap';
 import { UnifiedProgramService } from '../../programs/services/unifiedProgramService';
+import { useStorageSync } from '../../../core/hooks/useStorageSync';
 
 interface TargetDashboardProps {
     injectedId?: string;
@@ -32,19 +33,19 @@ export const TargetDashboard: React.FC<TargetDashboardProps> = ({ injectedId, hi
     const dna = ProfileAccess.getDNA(domainEnum);
     const program = activeTargetId ? UnifiedProgramService.getById(activeTargetId) : null;
 
-    const loadIntel = async () => {
+    const loadIntel = useCallback(async () => {
         if (!activeTargetId) return;
         const result = await TargetService.analyzeTarget(activeTargetId, domainEnum);
         if (result) setData(result);
-    };
+    }, [activeTargetId, domainEnum]);
 
     useEffect(() => {
         setLoading(true);
         loadIntel().then(() => setLoading(false));
-        
-        window.addEventListener('storage', loadIntel);
-        return () => window.removeEventListener('storage', loadIntel);
-    }, [activeTargetId, domainEnum]);
+    }, [loadIntel]);
+
+    // Standardized synchronization
+    useStorageSync(loadIntel);
 
     if (loading) return (
         <div className="h-96 flex flex-col items-center justify-center animate-in fade-in duration-500">
@@ -116,13 +117,12 @@ export const TargetDashboard: React.FC<TargetDashboardProps> = ({ injectedId, hi
                 <ProfileSynapse analysis={data} />
             </div>
 
-            {/* MISSION CONTROL - FIXED: Added items-start to prevent vertical stretching */}
+            {/* MISSION CONTROL */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                 <div className="lg:col-span-8">
                     <MissionCenter analysis={data} onTaskComplete={loadIntel} />
                 </div>
                 <div className="lg:col-span-4 space-y-6">
-                    {/* INTEGRATED IDENTITY CORE */}
                     <MissionIntel targetId={activeTargetId!} domain={domainEnum} />
                     
                     <div className="bg-slate-900 rounded-[32px] border-b-[8px] border-black p-6 text-white relative overflow-hidden group shadow-xl">

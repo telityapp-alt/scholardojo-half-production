@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
     ShieldCheck, Check, Zap, FileText, CheckSquare, Fingerprint
 } from 'lucide-react';
 import { DossierService, CampaignDossier } from '../../services/dossierService';
 import { UnifiedProgramService } from '../../../programs/services/unifiedProgramService';
+import { useStorageSync } from '../../../../core/hooks/useStorageSync';
 
 interface MissionDossierProps {
     targetId: string;
@@ -17,16 +18,17 @@ export const MissionDossier: React.FC<MissionDossierProps> = ({ targetId, target
     const program = useMemo(() => UnifiedProgramService.getById(targetId), [targetId]);
     const requiredKeys = program?.dossierRequirementKeys || [];
     
-    const refresh = () => {
+    const refresh = useCallback(() => {
         const data = DossierService.getForTarget(targetId) || DossierService.createInitial(targetId);
         setDossier(data);
-    };
+    }, [targetId]);
 
     useEffect(() => {
         refresh();
-        window.addEventListener('storage', refresh);
-        return () => window.removeEventListener('storage', refresh);
-    }, [targetId]);
+    }, [refresh]);
+
+    // Unified cross-tab synchronization
+    useStorageSync(refresh);
 
     const activeReadiness = useMemo(() => {
         if (!dossier) return 0;

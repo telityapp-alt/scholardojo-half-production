@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Calendar, Clock, MapPin, AlignLeft, Image as ImageIcon, Link as LinkIcon, DollarSign, Type, Tag, ChevronDown, ChevronLeft } from 'lucide-react';
 import { EventCategory, EventLocationType, GenericEvent, DomainType } from '../../../core/contracts/entityMap';
 import { createEventMock } from '../../../core/access/eventAccess';
@@ -17,6 +18,7 @@ const LOCATIONS: EventLocationType[] = ['Virtual', 'Physical', 'Hybrid'];
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({ domain, onClose, onSuccess }) => {
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
+    const submitTimerRef = useRef<any>(null);
     
     // Domain Theme Config
     const config = DOMAIN_CONFIGS[domain] || DOMAIN_CONFIGS[DomainType.STUDENT];
@@ -41,6 +43,12 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ domain, onCl
         attendees: 0
     });
 
+    useEffect(() => {
+        return () => {
+            if (submitTimerRef.current) clearTimeout(submitTimerRef.current);
+        };
+    }, []);
+
     const [tagInput, setTagInput] = useState('');
 
     const handleChange = (field: keyof GenericEvent, value: any) => {
@@ -59,7 +67,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ domain, onCl
         setSubmitting(true);
         
         try {
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await new Promise(resolve => {
+                submitTimerRef.current = setTimeout(resolve, 800);
+            });
             createEventMock({
                 ...formData,
                 id: Date.now().toString(),

@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, RefreshCw, BarChart3, Fingerprint, BrainCircuit } from 'lucide-react';
 import { ProfileAccess, UserDNA } from '../../../../core/access/profileAccess';
 import { DomainType } from '../../../../core/contracts/entityMap';
 import { AssessmentModal } from '../../../dashboard/components/widgets/AssessmentModal';
 import { AnalyticsRadar } from '../../../melytics/components/AnalyticsRadar';
+import { useStorageSync } from '../../../../core/hooks/useStorageSync';
 
 interface MissionIntelProps {
     targetId: string;
@@ -15,15 +16,16 @@ export const MissionIntel: React.FC<MissionIntelProps> = ({ targetId, domain }) 
     const [dna, setDna] = useState<UserDNA>(() => ProfileAccess.getDNA(domain));
     const [isAssessmentOpen, setIsAssessmentOpen] = useState(false);
 
-    const refresh = () => {
+    const refresh = useCallback(() => {
         setDna(ProfileAccess.getDNA(domain));
-    };
+    }, [domain]);
 
     useEffect(() => {
         refresh();
-        window.addEventListener('storage', refresh);
-        return () => window.removeEventListener('storage', refresh);
-    }, [domain, targetId]);
+    }, [refresh, targetId]);
+
+    // Memory-safe storage listener
+    useStorageSync(refresh);
 
     const avgScore = Math.round((dna.scores.technical + dna.scores.leadership + dna.scores.resilience + dna.scores.academic + dna.scores.fit + dna.scores.impact) / 6);
     const hasCalibrated = dna.lastUpdated !== '';
