@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DomainType } from '../../../core/contracts/entityMap';
 import { CommunityService } from '../services/communityService';
@@ -24,18 +24,33 @@ export const CommunityDetail: React.FC = () => {
     const [isSaved, setIsSaved] = useState(false);
 
     const domainEnum = (domain as DomainType) || DomainType.SCHOLAR;
+    
+    // Fix: Defuse timer leak
+    const fetchTimerRef = useRef<any>(null);
 
     useEffect(() => {
         if (!detailId) return;
         setLoading(true);
-        setTimeout(() => {
-            const p = CommunityService.getProgramById(detailId);
-            if (p) {
-                setProgram(p);
-                setIsSaved(SaveService.isSaved(p.id));
+        
+        if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+        
+        fetchTimerRef.current = setTimeout(() => {
+            try {
+                const p = CommunityService.getProgramById(detailId);
+                if (p) {
+                    setProgram(p);
+                    setIsSaved(SaveService.isSaved(p.id));
+                }
+            } catch (error) {
+                console.error("[Community] Load strike failed", error);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         }, 400);
+
+        return () => {
+            if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+        };
     }, [detailId, domainEnum]);
 
     const handleSave = () => {
@@ -62,7 +77,6 @@ export const CommunityDetail: React.FC = () => {
 
     return (
         <div className="animate-in slide-in-from-right duration-500 pb-24 max-w-7xl mx-auto px-4">
-            
             <div className="flex items-center justify-between mb-6">
                 <DuoButton variant="navigation" startIcon={ChevronLeft} onClick={() => navigate(-1)}>
                     Back to Board
@@ -104,21 +118,7 @@ export const CommunityDetail: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                
-                {/* LEFT CONTENT: THE FULL MISSION DATA */}
                 <div className="lg:col-span-8 space-y-10">
-                    
-                    {/* Warning Notice */}
-                    <div className="bg-orange-50 rounded-[24px] border-2 border-orange-200 border-b-[6px] p-5 flex items-center gap-5 shadow-sm">
-                        <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shrink-0">
-                            <ShieldAlert size={20} strokeWidth={3} />
-                        </div>
-                        <p className="text-orange-700 text-[11px] font-bold leading-tight">
-                            Data ini diekstrak oleh komunitas menggunakan AI. Verifikasi sumber resmi sebelum melakukan pendaftaran final.
-                        </p>
-                    </div>
-
-                    {/* Mission Brief Section */}
                     <div className="bg-white p-8 rounded-[32px] border-2 border-slate-200 border-b-[8px] shadow-sm relative overflow-hidden">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-2 bg-sky-100 text-sky-600 rounded-lg border-b-2 border-sky-200">
@@ -129,11 +129,8 @@ export const CommunityDetail: React.FC = () => {
                         <p className="text-base font-bold text-slate-600 leading-relaxed italic border-l-4 border-sky-200 pl-6 mb-8">
                             {renderJuicyContent(program.intel.description)}
                         </p>
-                        
                         <BriefingTab program={program} />
                     </div>
-
-                    {/* Secret Keys Section */}
                     <div className="bg-slate-900 rounded-[40px] border-b-[12px] border-black p-8 md:p-10 shadow-xl relative overflow-hidden">
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-10"></div>
                         <div className="relative z-10 space-y-12">
@@ -143,22 +140,14 @@ export const CommunityDetail: React.FC = () => {
                                 </div>
                                 <h3 className="text-xl font-black text-white uppercase tracking-tight">Shadow Protocol Keys</h3>
                             </div>
-                            
-                            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-sm">
-                                <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-3">Expert Verdict</p>
-                                <p className="text-xl font-bold text-sky-50 italic">"{program.shadowProtocol.expertVerdict}"</p>
-                            </div>
-
                             <ShadowProtocolTab program={program} />
                         </div>
                     </div>
                 </div>
 
-                {/* RIGHT SIDEBAR: FLOATING ACTION STRIKE */}
                 <div className="lg:col-span-4 sticky top-6 space-y-6">
                     <div className="bg-white p-6 rounded-[32px] border-2 border-slate-200 border-b-[10px] shadow-lg flex flex-col items-center text-center space-y-6 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12"><Target size={120} /></div>
-                        
                         <div className="relative z-10 w-full">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Mission Deadline</p>
                             <h4 className="text-2xl font-black text-slate-800">
@@ -176,36 +165,6 @@ export const CommunityDetail: React.FC = () => {
                             >
                                 Strike Now
                             </DuoButton>
-
-                            <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
-                                <ShieldCheck size={20} className="text-green-500" />
-                                <div className="text-left">
-                                    <p className="font-black text-slate-700 text-[10px] uppercase">Registry Synced</p>
-                                    <p className="text-[9px] font-bold text-slate-400 leading-tight">This track is community verified.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="pt-4 border-t-2 border-slate-50 w-full">
-                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.4em]">Node Connection Stable</p>
-                        </div>
-                    </div>
-
-                    {/* Stats Summary Panel */}
-                    <div className="bg-white p-6 rounded-[32px] border-2 border-slate-200 border-b-[10px] shadow-md space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Target size={14} className="text-red-500" />
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selectivity</span>
-                            </div>
-                            <span className="font-black text-slate-700">{program.intel.stats?.selectivityRatio}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Gem size={14} className="text-sky-500" />
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loot Value</span>
-                            </div>
-                            <span className="font-black text-slate-700">{program.intel.financialValue?.totalValue || 'N/A'}</span>
                         </div>
                     </div>
                 </div>

@@ -35,13 +35,17 @@ export const TargetDashboard: React.FC<TargetDashboardProps> = ({ injectedId, hi
 
     const loadIntel = useCallback(async () => {
         if (!activeTargetId) return;
-        const result = await TargetService.analyzeTarget(activeTargetId, domainEnum);
-        if (result) setData(result);
+        try {
+            const result = await TargetService.analyzeTarget(activeTargetId, domainEnum);
+            if (result) setData(result);
+        } catch (error) {
+            console.error("[Target] Strategy sync failed", error);
+        }
     }, [activeTargetId, domainEnum]);
 
     useEffect(() => {
         setLoading(true);
-        loadIntel().then(() => setLoading(false));
+        loadIntel().finally(() => setLoading(false));
     }, [loadIntel]);
 
     // Standardized synchronization
@@ -124,18 +128,9 @@ export const TargetDashboard: React.FC<TargetDashboardProps> = ({ injectedId, hi
                 </div>
                 <div className="lg:col-span-4 space-y-6">
                     <MissionIntel targetId={activeTargetId!} domain={domainEnum} />
-                    
-                    <div className="bg-slate-900 rounded-[32px] border-b-[8px] border-black p-6 text-white relative overflow-hidden group shadow-xl">
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-10"></div>
-                        <h4 className="font-black text-sky-400 uppercase text-[9px] tracking-[0.3em] mb-3 flex items-center gap-2"><Zap size={12}/> Tactical Tip</h4>
-                        <p className="font-bold text-slate-300 text-xs leading-relaxed italic">
-                            "Recalibrating your DNA updates your Neural Matrix globally. Ensure your records are confirmed."
-                        </p>
-                    </div>
                 </div>
             </div>
 
-            {/* DOSSIER */}
             <MissionDossier targetId={data.scholarship.id} targetTitle={data.scholarship.name} />
         </div>
     );

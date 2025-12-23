@@ -14,6 +14,7 @@ import {
 import { DuoCard } from '../../../components/DuoCard';
 import { ThemeEngine } from '../../../core/engines/themeEngine';
 import { useStorageSync } from '../../../core/hooks/useStorageSync';
+import { APP_CONFIG } from '../../../core/contracts/appConfig';
 
 interface ProgramsListViewProps {
     securedOnly?: boolean;
@@ -32,15 +33,21 @@ export const ProgramsListView: React.FC<ProgramsListViewProps> = ({ securedOnly 
     // MEMOIZED LOAD: Prevents infinite sync loops
     const load = useCallback(async () => {
         setLoading(true);
-        let data = await UnifiedProgramService.getAll(domainEnum);
-        
-        if (securedOnly) {
-            const securedIds = JSON.parse(localStorage.getItem('dojo_secured_missions') || '[]');
-            data = data.filter(p => securedIds.includes(p.id));
+        try {
+            let data = await UnifiedProgramService.getAll(domainEnum);
+            
+            if (securedOnly) {
+                // Fix: Use centralized key
+                const securedIds = JSON.parse(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.SECURED_MISSIONS) || '[]');
+                data = data.filter(p => securedIds.includes(p.id));
+            }
+            
+            setAllPrograms(data);
+        } catch (error) {
+            console.error("[Programs] Retrieval failed", error);
+        } finally {
+            setLoading(false);
         }
-        
-        setAllPrograms(data);
-        setLoading(false);
     }, [domainEnum, securedOnly]);
 
     // INITIAL LOAD

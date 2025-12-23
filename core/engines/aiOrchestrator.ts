@@ -2,8 +2,6 @@
 import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from "@google/genai";
 import { APP_CONFIG } from '../contracts/appConfig';
 
-const USAGE_KEY = 'dojo_ai_usage_ledger_v2';
-
 export const AIOrchestrator = {
     /**
      * Centralized execution for all Gemini calls.
@@ -12,18 +10,16 @@ export const AIOrchestrator = {
     generateContent: async (params: GenerateContentParameters & { model: string }): Promise<GenerateContentResponse> => {
         // 1. Safety Check: Daily Neural Energy
         const now = new Date();
-        const todayKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        const todayKey = now.toISOString().split('T')[0];
         
-        const rawUsage = localStorage.getItem(USAGE_KEY);
+        const rawUsage = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AI_USAGE);
         let ledger = rawUsage ? JSON.parse(rawUsage) : { date: todayKey, usedTokens: 0 };
 
-        // Reset if new day detected
         if (ledger.date !== todayKey) {
             ledger = { date: todayKey, usedTokens: 0 };
         }
 
         if (ledger.usedTokens > APP_CONFIG.AI.DAILY_CHARACTER_LIMIT) {
-            console.error("[Dojo AI] Daily energy limit reached.");
             throw new Error("Sensei is resting. Daily neural energy depleted. Try again tomorrow.");
         }
 
@@ -33,19 +29,17 @@ export const AIOrchestrator = {
         try {
             const response = await ai.models.generateContent(params);
 
-            // 3. Record Usage with Improved Token Math
+            // 3. Record Usage
             const inputStr = typeof params.contents === 'string' ? params.contents : JSON.stringify(params.contents);
             const outputStr = response.text || "";
-            
-            // Estimated tokens (chars * multiplier)
             const estimatedTokens = Math.round((inputStr.length + outputStr.length) * APP_CONFIG.AI.TOKEN_MULTIPLIER);
             
             ledger.usedTokens += estimatedTokens;
-            localStorage.setItem(USAGE_KEY, JSON.stringify(ledger));
+            localStorage.setItem(APP_CONFIG.STORAGE_KEYS.AI_USAGE, JSON.stringify(ledger));
 
             return response;
         } catch (error: any) {
-            console.error("[Dojo AI] Neural Strike Failed:", error);
+            // Pruned console logs for production readiness
             throw error;
         }
     }

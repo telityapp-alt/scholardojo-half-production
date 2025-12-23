@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DomainType, GenericVaultItem } from '../../../core/contracts/entityMap';
 import { DOMAIN_CONFIGS } from '../../../core/contracts/domainConfig';
@@ -32,23 +32,42 @@ export const VaultDetailView: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'BRIEF' | 'ROADMAP' | 'CRITERIA'>('BRIEF');
     const [showConfirm, setShowConfirm] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    
+    // Fix: Defuse timer leak
+    const createTimerRef = useRef<any>(null);
 
     useEffect(() => {
         if (!detailId) return;
         setLoading(true);
-        const data = getVaultItemById(detailId, domainEnum, lang);
-        setItem(data);
-        setLoading(false);
+        try {
+            const data = getVaultItemById(detailId, domainEnum, lang);
+            setItem(data);
+        } catch (error) {
+            console.error("[Vault] Failed to fetch item intel", error);
+        } finally {
+            setLoading(false);
+        }
+
+        return () => {
+            if (createTimerRef.current) clearTimeout(createTimerRef.current);
+        };
     }, [detailId, domainEnum, lang]);
 
     const handleApply = () => {
         if (!item) return;
         setIsCreating(true);
-        setTimeout(() => {
-            const newApp = AdmissionService.createFromVault(item, domainEnum);
-            setIsCreating(false);
-            setShowConfirm(false);
-            navigate(`/${domain}/workspace/target/${newApp.targetId}`);
+        
+        // Fix: Use ref to manage timeout lifecycle
+        createTimerRef.current = setTimeout(() => {
+            try {
+                const newApp = AdmissionService.createFromVault(item, domainEnum);
+                setIsCreating(false);
+                setShowConfirm(false);
+                navigate(`/${domain}/workspace/target/${newApp.targetId}`);
+            } catch (error) {
+                console.error("[Admission] Strike creation failed", error);
+                setIsCreating(false);
+            }
         }, 1200);
     };
 
@@ -73,7 +92,7 @@ export const VaultDetailView: React.FC = () => {
                 <DuoButton variant="navigation" startIcon={ChevronLeft} onClick={() => navigate(-1)} className="!py-1.5">{t.common.back}</DuoButton>
             </div>
 
-            {/* HEADER HERO: COMPACT & SHARP */}
+            {/* HEADER HERO */}
             <div className={`relative bg-duo-blue rounded-[32px] border-b-[10px] border-duo-blueDark p-6 md:p-10 text-white overflow-hidden mb-8 shadow-lg group`}>
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none group-hover:scale-105 transition-transform duration-[2000ms]"></div>
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
@@ -101,15 +120,12 @@ export const VaultDetailView: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* LEFT CONTENT: TABBED DATA */}
                 <div className="lg:col-span-8 space-y-8">
                     <VaultTabs activeTab={activeTab} onTabChange={setActiveTab} />
                     
                     <div className="min-h-[400px]">
                         {activeTab === 'BRIEF' && (
                             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                
-                                {/* DESCRIPTIVE BLOCK */}
                                 <section className="space-y-4">
                                     <div className="flex items-center gap-2.5 px-1">
                                         <DuoIcon icon={BookOpen} color="blue" size="sm" />
@@ -123,7 +139,6 @@ export const VaultDetailView: React.FC = () => {
                                     </div>
                                 </section>
 
-                                {/* REQUIREMENTS GRID */}
                                 <section className="space-y-4">
                                     <div className="flex items-center gap-2.5 px-1">
                                         <DuoIcon icon={ShieldCheck} color="purple" size="sm" />
@@ -147,30 +162,6 @@ export const VaultDetailView: React.FC = () => {
                                         ))}
                                     </div>
                                 </section>
-
-                                {/* IMPACT SECTION */}
-                                <section className="space-y-4">
-                                    <div className="flex items-center gap-2.5 px-1">
-                                        <DuoIcon icon={Star} color="green" size="sm" />
-                                        <h3 className="text-sm font-black text-slate-400 tracking-widest uppercase">Ecosystem Impact</h3>
-                                    </div>
-                                    <div className="bg-[#58cc02] rounded-[32px] border-b-[10px] border-[#46a302] p-6 shadow-lg relative overflow-hidden group">
-                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-                                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                             {(item.tags || []).map((tag, i) => (
-                                                 <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-white border-b-4 border-slate-100 group/tag hover:-translate-y-0.5 transition-transform">
-                                                     <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-[#58cc02] border-b-2 border-green-100 shrink-0">
-                                                         <Award size={20} strokeWidth={2.5} />
-                                                     </div>
-                                                     <div className="min-w-0">
-                                                        <p className="text-[7px] font-black text-slate-300 uppercase mb-0.5">Reward</p>
-                                                        <span className="font-black text-slate-700 uppercase text-[10px] tracking-wider truncate block">{tag}</span>
-                                                     </div>
-                                                 </div>
-                                             ))}
-                                        </div>
-                                    </div>
-                                </section>
                             </div>
                         )}
 
@@ -188,11 +179,9 @@ export const VaultDetailView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* RIGHT SIDEBAR: ACTION CENTER - COMPACTED */}
                 <div className="lg:col-span-4 space-y-6 sticky top-6">
                     <div className="bg-white p-6 rounded-[32px] border-2 border-slate-200 border-b-[12px] shadow-lg text-center space-y-6 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12 group-hover:rotate-0 transition-transform duration-700"><Target size={120} /></div>
-                        
                         <div className="space-y-1 relative z-10">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Deployment Window</p>
                             <h4 className="text-2xl font-black text-slate-800 flex items-center justify-center gap-2">
@@ -214,31 +203,6 @@ export const VaultDetailView: React.FC = () => {
                             >
                                 Start Mission
                             </DuoButton>
-
-                            <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border-2 border-slate-100">
-                                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm border-b-2 text-slate-300 shrink-0">
-                                    <Fingerprint size={16} />
-                                </div>
-                                <p className="text-left text-[9px] font-bold text-slate-400 leading-tight">
-                                    "Capture this target to your workspace to activate tracking."
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-slate-900 rounded-[32px] border-b-[8px] border-black p-6 text-white relative overflow-hidden group shadow-md">
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-10 group-hover:scale-105 transition-transform duration-[2000ms]"></div>
-                        <div className="relative z-10 space-y-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center border-b-4 border-sky-700 shadow-lg shrink-0"><BrainCircuit size={20} /></div>
-                                <div>
-                                    <h5 className="font-black text-sm uppercase tracking-tight text-sky-400 leading-none">Sensei Intel</h5>
-                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">AI Recommendation</p>
-                                </div>
-                            </div>
-                            <p className="text-xs font-bold text-slate-300 leading-relaxed italic border-l-3 border-sky-500 pl-3 py-0.5">
-                                "Ninjas who start early have an 89% higher success rate. Complete the Identity Scan first."
-                            </p>
                         </div>
                     </div>
                 </div>

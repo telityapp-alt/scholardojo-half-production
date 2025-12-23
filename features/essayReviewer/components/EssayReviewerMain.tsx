@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -29,6 +29,9 @@ export const EssayReviewerMain: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [wordCount, setWordCount] = useState(0);
 
+    // Fix: Defuse timer leak
+    const saveTimerRef = useRef<any>(null);
+
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -51,11 +54,17 @@ export const EssayReviewerMain: React.FC = () => {
         const m = EssayService.getMissionById(detailId);
         if (m) setMission(m);
         else navigate(`/${domain}/workspace/essay-reviewer`);
-    }, [detailId, domain]);
+        
+        return () => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, [detailId, domain, navigate]);
 
     const handleSave = () => {
         setIsSaving(true);
-        setTimeout(() => {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        
+        saveTimerRef.current = setTimeout(() => {
             setIsSaving(false);
             confetti({ particleCount: 30, spread: 30, origin: { y: 0.8 }, colors: ['#58cc02'] });
         }, 800);
@@ -102,10 +111,6 @@ export const EssayReviewerMain: React.FC = () => {
                             <p className="text-2xl md:text-3xl font-black text-slate-800 leading-[1.15] tracking-tight mb-4">
                                 "{mission.title}"
                             </p>
-                            <div className="flex items-center gap-2 text-slate-400 font-bold text-sm">
-                                <Info size={16} /> 
-                                <span>Sensei calibration: Focus on {mission.type.replace('_', ' ')} logic.</span>
-                            </div>
                         </div>
                     </div>
 
@@ -116,32 +121,10 @@ export const EssayReviewerMain: React.FC = () => {
                                     <div className="w-2 h-2 rounded-full bg-green-500 animate-ping"></div>
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Neural Sync Active</span>
                                 </div>
-                                <span className="w-px h-4 bg-slate-200"></span>
-                                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Version 1.0.4-Strike</span>
-                            </div>
-                            <div className="flex gap-2 pr-2">
-                                <button className="p-2 text-slate-300 hover:text-slate-600 transition-colors"><Wand2 size={18}/></button>
-                                <button className="p-2 text-slate-300 hover:text-slate-600 transition-colors"><Lightbulb size={18}/></button>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto min-h-[1000px] scrollbar-hide">
                             <EditorContent editor={editor} />
-                        </div>
-                        
-                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
-                            <div className="bg-slate-900/90 backdrop-blur-md px-6 py-3 rounded-full border-b-4 border-black text-white flex items-center gap-8 shadow-2xl border-white/10">
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[7px] font-black text-sky-400 uppercase tracking-widest">Words</span>
-                                    <span className="font-black text-lg leading-none">{wordCount}</span>
-                                </div>
-                                <div className="w-px h-6 bg-white/10"></div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[7px] font-black text-sky-400 uppercase tracking-widest">Target</span>
-                                    <span className="font-black text-lg leading-none">{mission.wordCount}</span>
-                                </div>
-                                <div className="w-px h-6 bg-white/10"></div>
-                                <button onClick={handleSave} className="flex items-center gap-2 text-sky-400 font-black text-[10px] uppercase hover:text-white transition-all"><Save size={16}/> Save</button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -173,19 +156,6 @@ export const EssayReviewerMain: React.FC = () => {
                         {activeTab === 'RECIPE' && <RecipePanel mission={mission} />}
                         {activeTab === 'BRAINSTORM' && <BrainstormPanel mission={mission} />}
                         {activeTab === 'REVIEW' && <ReviewPanel editor={editor} mission={mission} />}
-                    </div>
-
-                    <div className="bg-slate-900 rounded-[32px] border-b-[10px] border-black p-6 text-white relative overflow-hidden group shadow-lg">
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-15"></div>
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-8 h-8 rounded-xl bg-sky-500 flex items-center justify-center border-b-2 border-sky-700 shadow-md animate-pulse"><Sparkles size={16} fill="currentColor" /></div>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-400">Elite Maneuver</span>
-                            </div>
-                            <p className="text-sm font-bold italic text-slate-300 leading-relaxed border-l-2 border-sky-500 pl-4">
-                                "The first paragraph is your strike. If it doesn't hook the reader in 15 seconds, the mission fails."
-                            </p>
-                        </div>
                     </div>
                 </aside>
             </div>
@@ -223,19 +193,6 @@ const RecipePanel: React.FC<{ mission: EssayMission }> = ({ mission }) => (
                 ))}
             </div>
         </section>
-
-        <div className="mt-8 p-6 bg-green-50 rounded-[32px] border-4 border-green-100 border-b-[10px] relative overflow-hidden group">
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform"><ShieldCheck size={64}/></div>
-             <div className="flex items-start gap-4 relative z-10">
-                <Sparkles size={24} className="text-green-600 shrink-0 mt-1 fill-current" />
-                <div className="space-y-1">
-                    <p className="font-black text-[10px] uppercase text-green-700 tracking-widest">Sensei's Secret</p>
-                    <p className="text-xs font-bold text-green-800 leading-relaxed">
-                        {mission.recipe.proTip}
-                    </p>
-                </div>
-             </div>
-        </div>
     </div>
 );
 
@@ -333,11 +290,10 @@ const ReviewPanel: React.FC<{ editor: any; mission: EssayMission }> = ({ editor,
                         <div className="w-24 h-24 bg-indigo-50 rounded-[40px] flex items-center justify-center text-indigo-200 border-4 border-dashed border-indigo-100 shadow-inner">
                             <ShieldCheck size={56} />
                         </div>
-                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-indigo-500 rounded-full border-4 border-white animate-pulse"></div>
                     </div>
                     <div>
                         <h4 className="font-black text-slate-800 uppercase tracking-widest text-lg italic">Auditor Idle</h4>
-                        <p className="text-sm font-bold text-slate-400 mt-3 px-8 leading-relaxed">Submit your draft for a strategic strike audit. Gemini-3 will scan for weaknesses.</p>
+                        <p className="text-sm font-bold text-slate-400 mt-3 px-8 leading-relaxed">Submit your draft for a strategic strike audit.</p>
                     </div>
                     <DuoButton 
                         themeColor="blue" 
@@ -352,11 +308,8 @@ const ReviewPanel: React.FC<{ editor: any; mission: EssayMission }> = ({ editor,
             ) : (
                 <div className="animate-in slide-in-from-bottom-6 duration-500 space-y-10">
                     <div className="text-center relative">
-                        <div className="absolute inset-0 bg-sky-500/5 blur-[40px] rounded-full"></div>
-                        <div className="relative">
-                            <div className="text-7xl font-black text-[#1cb0f6] leading-none tracking-tighter italic">{result.score}%</div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Mission Match Rank</p>
-                        </div>
+                        <div className="text-7xl font-black text-[#1cb0f6] leading-none tracking-tighter italic">{result.score}%</div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Mission Match Rank</p>
                     </div>
 
                     <div className="space-y-4">

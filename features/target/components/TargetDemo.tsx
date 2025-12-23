@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, Trophy, MapPin, Target, Sparkles, Check, ArrowUp, Briefcase } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -24,11 +24,20 @@ export const TargetDemo: React.FC = () => {
     const [rankStage, setRankStage] = useState<'HIDDEN' | 'APPEAR' | 'COUNTING' | 'GLORY'>('HIDDEN');
 
     const foundation = MelyticsService.getFoundation(domainEnum);
-    const timerRef = useRef<any>(null);
+    
+    // Fix: Unified timer management
+    const intervalRef = useRef<any>(null);
+    const timeoutRef = useRef<any>(null);
+
+    useEffect(() => {
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, []);
 
     const isIntern = domainEnum === DomainType.INTERN;
 
-    // Simulate Dynamic Analysis State for Demo
     const currentAnalysis = useMemo(() => ({
         ...baseData,
         prediction: {
@@ -51,18 +60,23 @@ export const TargetDemo: React.FC = () => {
         setProb(prev => Math.min(99, prev + 15));
         setIsRankUp(true);
         setRankStage('APPEAR');
-        setTimeout(() => {
+        
+        // Clean existing
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        
+        timeoutRef.current = setTimeout(() => {
             setRankStage('COUNTING');
             const targetPercentile = Math.max(1, Math.floor(percentile / 5));
             let current = percentile;
-            if (timerRef.current) clearInterval(timerRef.current);
-            timerRef.current = setInterval(() => {
+            
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            intervalRef.current = setInterval(() => {
                 const diff = current - targetPercentile;
                 const step = Math.max(1, Math.ceil(diff / 5)); 
                 current -= step;
                 setPercentile(current);
                 if (current <= targetPercentile) {
-                    clearInterval(timerRef.current);
+                    if (intervalRef.current) clearInterval(intervalRef.current);
                     setRankStage('GLORY');
                     setTrend('UP');
                     confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, colors: ['#1cb0f6', '#58cc02', '#fbbf24'], zIndex: 9999 });
@@ -104,12 +118,6 @@ export const TargetDemo: React.FC = () => {
                         <h1 className="text-4xl md:text-6xl font-black text-slate-800 leading-[0.95] tracking-tight mb-2">{baseData.scholarship.name}</h1>
                         <p className="text-slate-400 font-bold text-sm">Simulation Active • {isIntern ? 'Corporate' : 'Grant'} Logic Loaded</p>
                     </div>
-                    <div className="flex items-stretch gap-4">
-                        <div className="bg-slate-50 px-6 py-4 rounded-3xl border-2 border-slate-200 flex flex-col items-center justify-center min-w-[120px]">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Impact Chance</p>
-                            <p className={`text-4xl font-black ${prob > 70 ? 'text-green-500' : 'text-yellow-500'}`}>{prob}%</p>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -134,7 +142,7 @@ export const TargetDemo: React.FC = () => {
                 </div>
                 <div className="lg:col-span-4">
                     <div className="bg-slate-900 p-8 rounded-[40px] border-b-[12px] border-black text-white relative overflow-hidden group shadow-xl">
-                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
                         <div className="relative z-10">
                             <div className="w-14 h-14 bg-[#1cb0f6] rounded-2xl flex items-center justify-center border-b-4 border-[#1899d6] shadow-2xl mb-6">
                                 <Sparkles size={32} />
