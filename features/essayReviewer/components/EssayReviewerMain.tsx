@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -9,12 +10,10 @@ import {
     BookOpen, MessageSquare, ShieldCheck, ChevronDown, 
     Save, Sparkles, BrainCircuit, Info, AlertCircle, 
     CheckCircle2, Bot, Send, ArrowRight, Target, PenTool,
-    // Added missing RefreshCw to the lucide-react import
     ChevronLeft, ListChecks, Wand2, Lightbulb, RefreshCw
 } from 'lucide-react';
 import { DuoButton } from '../../../components/DuoButton';
-// Fixed: Using standard import for GoogleGenAI
-import { GoogleGenAI } from "@google/genai";
+import { AIOrchestrator } from '../../../core/engines/aiOrchestrator';
 import { EssayService } from '../services/essayService';
 import { EssayMission } from '../types';
 import confetti from 'canvas-confetti';
@@ -24,11 +23,6 @@ type SidebarTab = 'RECIPE' | 'BRAINSTORM' | 'REVIEW';
 export const EssayReviewerMain: React.FC = () => {
     const { domain, detailId } = useParams<{ domain: string; detailId?: string }>();
     const navigate = useNavigate();
-
-    // If no detailId, show the Home (List) view
-    if (!detailId) {
-        return <EssayReviewerHome />;
-    }
 
     const [mission, setMission] = useState<EssayMission | null>(null);
     const [activeTab, setActiveTab] = useState<SidebarTab>('RECIPE');
@@ -53,6 +47,7 @@ export const EssayReviewerMain: React.FC = () => {
     });
 
     useEffect(() => {
+        if (!detailId) return;
         const m = EssayService.getMissionById(detailId);
         if (m) setMission(m);
         else navigate(`/${domain}/workspace/essay-reviewer`);
@@ -70,7 +65,6 @@ export const EssayReviewerMain: React.FC = () => {
 
     return (
         <div className="animate-in fade-in duration-500 pb-32 max-w-7xl mx-auto px-4">
-            {/* Header Nav */}
             <div className="flex items-center justify-between mb-8">
                 <DuoButton variant="navigation" startIcon={ChevronLeft} onClick={() => navigate(-1)}>
                     Mission Board
@@ -87,10 +81,7 @@ export const EssayReviewerMain: React.FC = () => {
             </div>
 
             <div className="flex flex-col lg:flex-row gap-10 min-h-[90vh] items-start">
-                {/* 70% LEFT: THE FORGE EDITOR */}
                 <div className="flex-1 lg:max-w-[70%] w-full space-y-8">
-                    
-                    {/* Dynamic Prompt Card */}
                     <div className="bg-[#fff9f0] rounded-[40px] border-2 border-slate-200 border-b-[10px] p-8 md:p-10 relative overflow-hidden group shadow-md">
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] opacity-30 pointer-events-none"></div>
                         <div className="relative z-10">
@@ -118,7 +109,6 @@ export const EssayReviewerMain: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Editor Container */}
                     <div className="bg-white rounded-[48px] border-2 border-slate-200 border-b-[16px] overflow-hidden flex flex-col shadow-2xl relative">
                         <div className="p-4 border-b-2 border-slate-50 flex items-center justify-between bg-slate-50/50 sticky top-0 z-20 backdrop-blur-sm">
                             <div className="flex items-center gap-6 px-4">
@@ -138,7 +128,6 @@ export const EssayReviewerMain: React.FC = () => {
                             <EditorContent editor={editor} />
                         </div>
                         
-                        {/* Interactive Float Controls */}
                         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
                             <div className="bg-slate-900/90 backdrop-blur-md px-6 py-3 rounded-full border-b-4 border-black text-white flex items-center gap-8 shadow-2xl border-white/10">
                                 <div className="flex flex-col items-center">
@@ -157,10 +146,7 @@ export const EssayReviewerMain: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 30% RIGHT: THE SIDEBAR PROTOCOL */}
                 <aside className="w-full lg:w-[30%] flex flex-col gap-8 sticky top-4 h-fit">
-                    
-                    {/* Sub-Tab Selector */}
                     <div className="bg-white p-2 rounded-[32px] border-2 border-slate-200 border-b-[8px] flex gap-2 shadow-sm shrink-0">
                         {[
                             { id: 'RECIPE', icon: BookOpen, label: 'Recipe' },
@@ -183,14 +169,12 @@ export const EssayReviewerMain: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Tab Panels */}
                     <div className="bg-white rounded-[40px] border-2 border-slate-200 border-b-[12px] p-8 flex flex-col min-h-[550px] shadow-xl animate-in slide-in-from-right-6 duration-300 relative overflow-hidden">
                         {activeTab === 'RECIPE' && <RecipePanel mission={mission} />}
                         {activeTab === 'BRAINSTORM' && <BrainstormPanel mission={mission} />}
                         {activeTab === 'REVIEW' && <ReviewPanel editor={editor} mission={mission} />}
                     </div>
 
-                    {/* Tactical Tip Bubble */}
                     <div className="bg-slate-900 rounded-[32px] border-b-[10px] border-black p-6 text-white relative overflow-hidden group shadow-lg">
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-15"></div>
                         <div className="relative z-10">
@@ -269,9 +253,8 @@ const BrainstormPanel: React.FC<{ mission: EssayMission }> = ({ mission }) => {
         setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
         setLoading(true);
 
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         try {
-            const res = await ai.models.generateContent({
+            const res = await AIOrchestrator.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: `CONTEXT: ESSAY BRAINSTORM.\nMISSION: ${mission.title}\nPROGRAM: ${mission.programName}\nUSER IDEA: ${userMsg}`,
                 config: { systemInstruction: "You are the Essay Sensei. Energetic, concise, Duolingo style. Turn vague ideas into sharp mission beats. Focus on the 'Strategy' in the recipe." }
@@ -323,9 +306,8 @@ const ReviewPanel: React.FC<{ editor: any; mission: EssayMission }> = ({ editor,
         if (!editor || loading) return;
         setLoading(true);
         const text = editor.getText();
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         try {
-            const res = await ai.models.generateContent({
+            const res = await AIOrchestrator.generateContent({
                 model: 'gemini-3-pro-preview',
                 contents: text,
                 config: { 
@@ -408,17 +390,6 @@ const ReviewPanel: React.FC<{ editor: any; mission: EssayMission }> = ({ editor,
                     <button onClick={() => setResult(null)} className="w-full py-5 bg-slate-100 text-slate-400 rounded-2xl font-black text-xs uppercase tracking-[0.3em] border-b-4 border-slate-200 active:translate-y-1 active:border-b-0 transition-all">Re-initialize Audit</button>
                 </div>
             )}
-        </div>
-    );
-};
-
-// Internal Import for the Home View
-const EssayReviewerHome: React.FC = () => {
-    // This is defined in the EssayReviewerHome.tsx file but kept here for logical consistency 
-    // if you want them in one file. For production, better split.
-    return (
-        <div className="py-20 text-center">
-            <h2 className="text-3xl font-black">Essay Home Loading...</h2>
         </div>
     );
 };

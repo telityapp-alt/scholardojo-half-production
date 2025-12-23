@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Lightbulb, RefreshCw, MessageSquare, Sparkles, Send } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { AIOrchestrator } from '../../../../core/engines/aiOrchestrator';
 import { Editor } from '@tiptap/react';
 
 export const AiSuggest: React.FC<{ editor: Editor | null }> = ({ editor }) => {
@@ -15,18 +15,21 @@ export const AiSuggest: React.FC<{ editor: Editor | null }> = ({ editor }) => {
 
     const getSuggestion = async () => {
         setLoading(true);
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const model = 'gemini-3-flash-preview';
-        
         const context = editor.getText();
         const system = `You are the "Dojo Strategist". Provide one brilliant suggestion to improve this document. 
             Highlight: ${highlightedText || 'Full Document'}.
             Be specific. Suggest content that boosts the candidate's ranking.`;
         
         try {
-            const res = await ai.models.generateContent({ model, contents: context, config: { systemInstruction: system } });
+            const res = await AIOrchestrator.generateContent({ 
+                model: 'gemini-3-flash-preview', 
+                contents: context, 
+                config: { systemInstruction: system } 
+            });
             setSuggestion(res.text || "Sensei is meditating.");
-        } catch (e) { setSuggestion("Neural link lost."); }
+        } catch (e: any) { 
+            setSuggestion(`Neural link lost: ${e.message}`); 
+        }
         setLoading(false);
     };
 

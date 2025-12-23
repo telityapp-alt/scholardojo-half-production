@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Wand2, RefreshCw, Type, Zap, X, Info } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { AIOrchestrator } from '../../../../core/engines/aiOrchestrator';
 import { Editor } from '@tiptap/react';
 import confetti from 'canvas-confetti';
 
@@ -18,13 +18,15 @@ export const AiRefiner: React.FC<{ editor: Editor | null }> = ({ editor }) => {
         if (!text) return;
 
         setLoading(true);
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const model = 'gemini-3-flash-preview';
         const system = `You are the "Grammar Ninja". Refine this text to be ${mode}. 
             Return ONLY the refined text. No conversational filler. Keep technical context.`;
         
         try {
-            const res = await ai.models.generateContent({ model, contents: text, config: { systemInstruction: system } });
+            const res = await AIOrchestrator.generateContent({ 
+                model: 'gemini-3-flash-preview', 
+                contents: text, 
+                config: { systemInstruction: system } 
+            });
             if (res.text) {
                 if (hasSelection) {
                     editor.chain().focus().insertContent(res.text).run();

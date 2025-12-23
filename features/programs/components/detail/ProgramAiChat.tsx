@@ -7,7 +7,7 @@ import {
     AlertCircle, Info, BrainCircuit, ChevronRight,
     Database, User, X, GraduationCap
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { AIOrchestrator } from '../../../../core/engines/aiOrchestrator';
 import { useLanguage } from '../../../../core/hooks/useLanguage';
 import { ProfileAccess } from '../../../../core/access/profileAccess';
 
@@ -44,8 +44,6 @@ export const ProgramAiChat: React.FC<Props> = ({ program }) => {
         setMessages(prev => [...prev, { role: 'user', text }]);
         setIsThinking(true);
 
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
         const systemInstruction = `
             You are the "Tactical Sensei" specifically for the program: ${program.title}. 
             Your personality is purely based on the ${program.domain.toUpperCase()} domain, but your knowledge is restricted to the specific mission data below.
@@ -59,7 +57,7 @@ export const ProgramAiChat: React.FC<Props> = ({ program }) => {
             - STRATEGIC WANTS: ${JSON.stringify(program.intel.strategicWants)}
             - LETHAL MISTAKES (Shadow Protocol): ${JSON.stringify(program.shadowProtocol.lethalMistakes.map(m => m.title + ": " + m.reason))}
             - EXPERT VERDICT: ${program.shadowProtocol.expertVerdict}
-            - ELITE TIPS: ${JSON.stringify(program.shadowProtocol.eliteTips.map(t => t.title + ": " + t.content))}
+            - ELITE TIPS: ${JSON.stringify(program.shadowProtocol.eliteTips?.map(t => t.title + ": " + t.content) || [])}
 
             CANDIDATE DNA (Context for tailored advice):
             - NAME: ${dna.name}
@@ -76,15 +74,15 @@ export const ProgramAiChat: React.FC<Props> = ({ program }) => {
         `;
 
         try {
-            const response = await ai.models.generateContent({
+            const response = await AIOrchestrator.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: text,
                 config: { systemInstruction }
             });
 
             setMessages(prev => [...prev, { role: 'model', text: response.text || "Neural link unstable." }]);
-        } catch (e) {
-            setMessages(prev => [...prev, { role: 'model', text: "Strike failed. Check connection." }]);
+        } catch (e: any) {
+            setMessages(prev => [...prev, { role: 'model', text: e.message || "Strike failed. Check connection." }]);
         } finally {
             setIsThinking(false);
         }
@@ -102,8 +100,6 @@ export const ProgramAiChat: React.FC<Props> = ({ program }) => {
 
     return (
         <div className="max-w-5xl mx-auto h-[800px] flex flex-col bg-white rounded-[48px] border-2 border-slate-200 border-b-[16px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500">
-            
-            {/* Minimalist Header Area */}
             <div className="bg-white p-6 flex items-center justify-between border-b-2 border-slate-100 shrink-0 z-20">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-[#1cb0f6] rounded-2xl flex items-center justify-center text-white border-b-4 border-sky-700 shadow-md">
@@ -125,12 +121,7 @@ export const ProgramAiChat: React.FC<Props> = ({ program }) => {
                 </div>
             </div>
 
-            {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/30 scrollbar-hide" ref={scrollRef}>
-                <div className="text-center py-2 opacity-30">
-                     <span className="bg-slate-200 text-slate-500 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.3em]">Encrypted Mission Channel</span>
-                </div>
-
                 {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                         <div className={`flex gap-4 max-w-[80%] ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -171,12 +162,10 @@ export const ProgramAiChat: React.FC<Props> = ({ program }) => {
                 )}
             </div>
 
-            {/* Input Area */}
             <div className="p-8 bg-white border-t-2 border-slate-100 shrink-0">
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-6 -mx-2 px-2">
                     <QuickStrike label="Peluang Lolos" icon={Target} onClick={() => handleSend(lang === 'id' ? "Berdasarkan DNA saya, apa peluang lolos saya di program ini?" : "Based on my DNA, what are my acceptance odds for this program?")} />
                     <QuickStrike label="Fatal Mistakes" icon={AlertCircle} onClick={() => handleSend(lang === 'id' ? "Kasih tau 3 kesalahan fatal yang paling dilarang di sini." : "Tell me 3 lethal mistakes strictly forbidden here.")} />
-                    {/* Fix: Added missing GraduationCap import above */}
                     <QuickStrike label="Visi Dosen" icon={GraduationCap} onClick={() => handleSend(lang === 'id' ? "Jelaskan tentang komitmen mengabdi di kampus." : "Explain the educator commitment requirement.")} />
                     <QuickStrike label="Success Keys" icon={BrainCircuit} onClick={() => handleSend(lang === 'id' ? "Apa kunci sukses utama untuk beasiswa ini?" : "What is the ultimate success key for this scholarship?")} />
                 </div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { ShieldCheck, RefreshCw, Sparkles, Target, ShieldAlert, Bot, Zap, Info, CheckCircle2 } from 'lucide-react';
-import { DocAiEngine } from '../../services/docAiEngine';
+import { AIOrchestrator } from '../../../../core/engines/aiOrchestrator';
 import { Editor } from '@tiptap/react';
 import { UnifiedProgram } from '../../../programs/types';
 
@@ -16,7 +16,6 @@ export const AiAuditor: React.FC<Props> = ({ editor, program, docType, onOpenSel
     const [audit, setAudit] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    // Intelligence: Dynamically find the specific blueprint matching this editor session
     const activeBrief = useMemo(() => {
         if (!program) return null;
         return program.shadowProtocol.docBriefs.find(b => 
@@ -30,11 +29,29 @@ export const AiAuditor: React.FC<Props> = ({ editor, program, docType, onOpenSel
         setLoading(true);
         const content = editor.getText();
         
+        const systemInstruction = `
+            You are the "Strategic Dojo Auditor" for ${program.organizer}.
+            TARGET MISSION: ${program.title}
+            ARTIFACT TYPE: ${activeBrief?.label || docType}
+            
+            ${activeBrief ? `STRICT BLUEPRINT BRIEF: ${activeBrief.instructions}
+            AUDIT CRITERIA: ${activeBrief.aiAuditCriteria.join(', ')}` : ''}
+            LETHAL MISTAKES TO DETECT: ${program.shadowProtocol.lethalMistakes.map(m => m.title).join(', ')}
+            
+            GOAL: Provide a brutal but high-impact tactical audit in Duolingo style.
+            OUTPUT: Markdown format. Identify specific gaps. Be direct.
+        `;
+
         try {
-            const res = await DocAiEngine.auditWithContext(content, program, docType);
-            if (res.error) setAudit(`**ERROR:** ${res.error}`);
-            else setAudit(res.verdict);
-        } catch (e) { setAudit("Offline."); }
+            const res = await AIOrchestrator.generateContent({
+                model: 'gemini-3-flash-preview',
+                contents: content,
+                config: { systemInstruction }
+            });
+            setAudit(res.text || "Neural link stable.");
+        } catch (e: any) { 
+            setAudit(`**ERROR:** ${e.message}`); 
+        }
         setLoading(false);
     };
 
@@ -60,7 +77,6 @@ export const AiAuditor: React.FC<Props> = ({ editor, program, docType, onOpenSel
 
     return (
         <div className="space-y-6 animate-in slide-in-from-right duration-500">
-            {/* Mission Persistence Card */}
             <div className="bg-slate-900 rounded-[32px] border-b-[8px] border-black p-5 text-white relative overflow-hidden group shadow-xl">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
                 <div className="relative z-10 space-y-4">
@@ -117,7 +133,9 @@ export const AiAuditor: React.FC<Props> = ({ editor, program, docType, onOpenSel
                         <button onClick={() => setAudit(null)} className="text-indigo-200 hover:text-indigo-600 transition-colors p-1"><RefreshCw size={14} strokeWidth={3}/></button>
                     </div>
                     <div className="prose prose-sm prose-slate font-bold text-slate-600 max-h-[450px] overflow-y-auto scrollbar-hide relative z-10 leading-relaxed custom-formatting">
-                        {audit}
+                        {audit.split('\n').map((line, i) => (
+                            <p key={i}>{line}</p>
+                        ))}
                     </div>
                 </div>
             )}
