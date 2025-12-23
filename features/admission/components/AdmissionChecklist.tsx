@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DossierService } from '../../target/services/dossierService';
-import { CheckCircle2, FileText, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { UnifiedProgramService } from '../../programs/services/unifiedProgramService';
+import { CheckCircle2, FileText, ShieldCheck } from 'lucide-react';
 import { AdmissionPopup } from './AdmissionPopup';
 import { useParams } from 'react-router-dom';
+import { useStorageSync } from '../../../core/hooks/useStorageSync';
 
 interface AdmissionChecklistProps {
     targetId: string;
@@ -19,16 +19,17 @@ export const AdmissionChecklist: React.FC<AdmissionChecklistProps> = ({ targetId
     const [showConfirm, setShowConfirm] = useState(false);
     const [pendingItem, setPendingItem] = useState<{ id: string; label: string } | null>(null);
 
-    const refresh = () => {
+    const refresh = useCallback(() => {
         const data = DossierService.getLedger(targetId);
         setLedger(data);
-    };
+    }, [targetId]);
 
     useEffect(() => {
         refresh();
-        window.addEventListener('storage', refresh);
-        return () => window.removeEventListener('storage', refresh);
-    }, [targetId]);
+    }, [refresh]);
+
+    // Automated cleanup and synchronization
+    useStorageSync(refresh);
 
     const handleToggleAttempt = (id: string, label: string, currentStatus: string) => {
         if (currentStatus === 'COMPLETED' || currentStatus === 'AI_VERIFIED') {

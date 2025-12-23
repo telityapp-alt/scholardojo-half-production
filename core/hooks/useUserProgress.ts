@@ -1,21 +1,23 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DomainType } from '../contracts/entityMap';
-import { calculateLevelFromXP, UserLevel } from '../engines/levelEngine';
+import { calculateLevelFromXP } from '../engines/levelEngine';
 import { ProgressionService, DomainProgression } from '../services/progressionService';
+import { useStorageSync } from './useStorageSync';
 
 export function useUserProgress(domain: DomainType) {
   const [data, setData] = useState<DomainProgression>(() => ProgressionService.getDomainData(domain));
   
-  const refresh = () => {
+  const refresh = useCallback(() => {
     setData(ProgressionService.getDomainData(domain));
-  };
+  }, [domain]);
 
   useEffect(() => {
     refresh();
-    window.addEventListener('storage', refresh);
-    return () => window.removeEventListener('storage', refresh);
-  }, [domain]);
+  }, [refresh]);
+
+  // Sycnronize progression across components and tabs
+  useStorageSync(refresh);
 
   const levelInfo = calculateLevelFromXP(data.xp);
 

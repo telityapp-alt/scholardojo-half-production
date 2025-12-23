@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
     X, Camera, Mic, MicOff, CameraOff, Send, 
     Bot, Zap, Swords, Trophy, Loader2, Volume2, 
@@ -16,7 +16,6 @@ import { ProgressionService } from '../../../core/services/progressionService';
 import { REWARDS } from '../../../core/engines/levelEngine';
 import confetti from 'canvas-confetti';
 
-// Fix: Defined missing BattleStageProps interface
 interface BattleStageProps {
     domain: DomainType;
     difficulty: ArenaDifficulty;
@@ -36,6 +35,8 @@ export const BattleStage: React.FC<BattleStageProps> = ({
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const recognitionRef = useRef<any>(null);
+    /* Fix: replaced NodeJS.Timeout with any to resolve namespace error */
+    const roundTimerRef = useRef<any | null>(null);
 
     const [isListening, setIsListening] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -49,7 +50,8 @@ export const BattleStage: React.FC<BattleStageProps> = ({
     const [isEvaluating, setIsEvaluating] = useState(false);
     const [showResults, setShowResults] = useState(false);
 
-    const speak = (text: string) => {
+    // REFACTOR: Use callback to prevent stale closures in timers
+    const speak = useCallback((text: string) => {
         if (!voiceEnabled) return;
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
@@ -58,7 +60,7 @@ export const BattleStage: React.FC<BattleStageProps> = ({
         utterance.voice = voices.find(v => v.lang.startsWith(langCode)) || voices[0];
         utterance.rate = 1.1; 
         window.speechSynthesis.speak(utterance);
-    };
+    }, [voiceEnabled, language]);
 
     const toggleSpeech = () => {
         if (isListening) { 
@@ -66,10 +68,7 @@ export const BattleStage: React.FC<BattleStageProps> = ({
             setIsListening(false); 
         } else {
             const SpeechRecognitionConstructor = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-            if (!SpeechRecognitionConstructor || typeof SpeechRecognitionConstructor !== 'function') {
-                console.warn("Speech recognition not supported in this environment.");
-                return;
-            }
+            if (!SpeechRecognitionConstructor) return;
             
             try {
                 const recognition = new SpeechRecognitionConstructor();
@@ -82,77 +81,112 @@ export const BattleStage: React.FC<BattleStageProps> = ({
                 recognition.start();
                 setIsListening(true);
             } catch (e) {
-                console.error("Failed to initialize speech recognition:", e);
+                console.error("Speech Error:", e);
             }
         }
     };
 
     useEffect(() => {
+        let isMounted = true;
+        
         const init = async () => {
             setLoading(true);
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                if (!isMounted) return stream.getTracks().forEach(t => t.stop());
+                
                 streamRef.current = stream;
                 if (videoRef.current) videoRef.current.srcObject = stream;
+                
                 const set = await ArenaService.generateBattleSet(domain, curriculum.title, targetItem, manualObjective, manualContext, difficulty, language);
+                if (!isMounted) return;
+
                 setQuestions(set);
                 const intro = language === 'id' ? "Boss telah memasuki arena. Tunjukkan kemampuanmu!" : "The Boss has entered the arena. Show me your strength!";
                 setHistory([{ role: 'boss', text: intro }]);
                 speak(intro);
                 setLoading(false);
-            } catch (err) { onExit(); }
+            } catch (err) { 
+                if (isMounted) onExit(); 
+            }
         };
+
         init();
+
         return () => {
-            streamRef.current?.getTracks().forEach(t => t.stop());
+            isMounted = false;
+            if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+            if (roundTimerRef.current) clearTimeout(roundTimerRef.current);
             window.speechSynthesis.cancel();
-            recognitionRef.current?.stop();
+            if (recognitionRef.current) recognitionRef.current.stop();
         };
-    }, []);
+    }, [domain, curriculum.title, targetItem, manualObjective, manualContext, difficulty, language, onExit, speak]);
 
     const handleSend = async () => {
         if (!input.trim() || isEvaluating) return;
         if (isListening) recognitionRef.current?.stop();
+        
         const userMsg = input;
         setInput('');
         setHistory(prev => [...prev, { role: 'ninja', text: userMsg }]);
         setIsEvaluating(true);
         
-        const result = await ArenaService.evaluateAnswer(questions[currentRound].text, userMsg, questions[currentRound].expectedPoints, language);
-        
-        const isStrongHit = result.score >= 20;
-        const newCombo = isStrongHit ? comboCount + 1 : 0;
-        setComboCount(newCombo);
-        
-        if (newCombo >= 2) {
-            confetti({ particleCount: 40, spread: 20, colors: ['#fbbf24'], origin: { x: 0.8, y: 0.8 } });
-        }
+        try {
+            const result = await ArenaService.evaluateAnswer(questions[currentRound].text, userMsg, questions[currentRound].expectedPoints, language);
+            
+            const isStrongHit = result.score >= 20;
+            const newCombo = isStrongHit ? comboCount + 1 : 0;
+            setComboCount(newCombo);
+            
+            if (newCombo >= 2) {
+                confetti({ particleCount: 40, spread: 20, colors: ['#fbbf24'], origin: { x: 0.8, y: 0.8 } });
+            }
 
-        setBossHp(prev => Math.max(0, prev - result.score));
-        
-        const multiplier = 1 + (newCombo * 0.2);
-        ProgressionService.addXP(domain, Math.round(result.score * REWARDS.ARENA_DAMAGE * multiplier));
+            setBossHp(prev => Math.max(0, prev - result.score));
+            const multiplier = 1 + (newCombo * 0.2);
+            ProgressionService.addXP(domain, Math.round(result.score * REWARDS.ARENA_DAMAGE * multiplier));
 
-        const bossEntry = { role: 'boss' as const, text: result.feedback, score: result.score, weaknesses: result.weaknesses, improvements: result.improvements };
-        setHistory(prev => [...prev, bossEntry]);
-        speak(result.feedback);
-        setIsEvaluating(false);
+            const bossEntry = { role: 'boss' as const, text: result.feedback, score: result.score, weaknesses: result.weaknesses, improvements: result.improvements };
+            setHistory(prev => [...prev, bossEntry]);
+            speak(result.feedback);
+            setIsEvaluating(false);
 
-        if (currentRound < questions.length - 1) {
-            setTimeout(() => { 
-                setCurrentRound(prev => prev + 1); 
-                const nextQ = questions[currentRound + 1]?.text;
-                setHistory(prev => [...prev, { role: 'boss', text: nextQ }]);
-                speak(nextQ); 
-            }, 2500);
-        } else {
-            setTimeout(() => setShowResults(true), 2500);
+            // STICKY TIMER FIX
+            if (roundTimerRef.current) clearTimeout(roundTimerRef.current);
+            
+            if (currentRound < questions.length - 1) {
+                roundTimerRef.current = setTimeout(() => { 
+                    setCurrentRound(prev => prev + 1); 
+                    const nextQ = questions[currentRound + 1]?.text;
+                    setHistory(prev => [...prev, { role: 'boss', text: nextQ }]);
+                    speak(nextQ); 
+                }, 2500);
+            } else {
+                roundTimerRef.current = setTimeout(() => setShowResults(true), 2500);
+            }
+        } catch (e) {
+            setIsEvaluating(false);
         }
     };
 
-    if (loading) return <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center animate-in fade-in duration-1000"><div className="w-32 h-32 bg-white rounded-[40px] border-b-[12px] border-slate-200 flex items-center justify-center text-indigo-600 animate-bounce"><Swords size={64} /></div><h2 className="text-white font-black text-2xl mt-8 tracking-widest uppercase">Preparing Arena...</h2></div>;
+    if (loading) return (
+        <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center animate-in fade-in duration-1000">
+            <div className="w-32 h-32 bg-white rounded-[40px] border-b-[12px] border-slate-200 flex items-center justify-center text-indigo-600 animate-bounce">
+                <Swords size={64} />
+            </div>
+            <h2 className="text-white font-black text-2xl mt-8 tracking-widest uppercase">Preparing Arena...</h2>
+        </div>
+    );
     
-    if (showResults) return <BattleAnalytics domain={domain} history={history} targetTitle={manualObjective || curriculum.title} difficulty={difficulty} onExit={onExit} />;
+    if (showResults) return (
+        <BattleAnalytics 
+            domain={domain} 
+            history={history} 
+            targetTitle={manualObjective || curriculum.title} 
+            difficulty={difficulty} 
+            onExit={onExit} 
+        />
+    );
 
     return (
         <div className="fixed inset-0 bg-[#f7f7f7] z-[9999] flex flex-col animate-in slide-in-from-bottom-12">
@@ -247,19 +281,15 @@ export const BattleStage: React.FC<BattleStageProps> = ({
                 <div className="lg:col-span-5 flex flex-col gap-6">
                     <div className="flex-1 bg-slate-950 rounded-[48px] border-b-[16px] border-black overflow-hidden relative shadow-2xl group">
                         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1] opacity-80 group-hover:opacity-100 transition-opacity" />
-                        
                         <div className="absolute inset-0 pointer-events-none border-[20px] border-black/20"></div>
-                        
                         <div className="absolute top-6 left-6 flex items-center gap-3">
                              <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
                              <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 font-black text-[9px] text-white uppercase tracking-[0.2em]">COMBAT LINKED</div>
                         </div>
-
                         <button onClick={onExit} className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-red-500 text-white rounded-2xl backdrop-blur-md transition-all flex items-center justify-center border-b-4 border-black/20 active:translate-y-1">
-                            <X size={24} strokeWidth={3} />
+                            <X size={24} strokeWidth={4} />
                         </button>
                     </div>
-                    
                     <div className="bg-white p-6 rounded-[32px] border-2 border-slate-200 border-b-[8px] flex items-center gap-4">
                         <div className="w-12 h-12 bg-sky-100 rounded-2xl flex items-center justify-center text-sky-500 border-b-2 border-sky-100 shrink-0">
                             <Info size={24} />

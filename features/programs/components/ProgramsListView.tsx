@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DomainType } from '../../../core/contracts/entityMap';
 import { UnifiedProgramService } from '../services/unifiedProgramService';
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { DuoCard } from '../../../components/DuoCard';
 import { ThemeEngine } from '../../../core/engines/themeEngine';
+import { useStorageSync } from '../../../core/hooks/useStorageSync';
 
 interface ProgramsListViewProps {
     securedOnly?: boolean;
@@ -26,29 +27,29 @@ export const ProgramsListView: React.FC<ProgramsListViewProps> = ({ securedOnly 
     const [allPrograms, setAllPrograms] = useState<UnifiedProgram[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Get centralized branding based on current domain
     const branding = ThemeEngine.getBranding(domainEnum);
 
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            let data = await UnifiedProgramService.getAll(domainEnum);
-            
-            if (securedOnly) {
-                const securedIds = JSON.parse(localStorage.getItem('dojo_secured_missions') || '[]');
-                data = data.filter(p => securedIds.includes(p.id));
-            }
-            
-            setAllPrograms(data);
-            setLoading(false);
-        };
-        load();
+    // MEMOIZED LOAD: Prevents infinite sync loops
+    const load = useCallback(async () => {
+        setLoading(true);
+        let data = await UnifiedProgramService.getAll(domainEnum);
         
         if (securedOnly) {
-            window.addEventListener('storage', load);
-            return () => window.removeEventListener('storage', load);
+            const securedIds = JSON.parse(localStorage.getItem('dojo_secured_missions') || '[]');
+            data = data.filter(p => securedIds.includes(p.id));
         }
+        
+        setAllPrograms(data);
+        setLoading(false);
     }, [domainEnum, securedOnly]);
+
+    // INITIAL LOAD
+    useEffect(() => {
+        load();
+    }, [load]);
+
+    // SYNC: Replace manual listener with centralized hook
+    useStorageSync(load);
 
     const { 
         filteredPrograms, facets, searchQuery, setSearchQuery, 
@@ -98,8 +99,6 @@ export const ProgramsListView: React.FC<ProgramsListViewProps> = ({ securedOnly 
 
     return (
         <div className="space-y-12 animate-in fade-in duration-500 pb-40 max-w-7xl mx-auto px-4">
-            
-            {/* STATIC FILTER BAR */}
             <header className="flex flex-col gap-6 relative z-[50]">
                 <div className="bg-white p-6 md:p-8 rounded-[40px] border-2 border-slate-200 border-b-[10px] shadow-sm flex flex-col gap-6">
                     <div className="flex flex-col lg:flex-row items-center gap-4 w-full">

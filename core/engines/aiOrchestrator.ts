@@ -1,47 +1,51 @@
 
 import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from "@google/genai";
+import { APP_CONFIG } from '../contracts/appConfig';
 
-// DOJO AI GUARD: Character-based proxy for token management
-const DAILY_LIMIT = 200000; 
-const USAGE_KEY = 'dojo_ai_usage_ledger';
+const USAGE_KEY = 'dojo_ai_usage_ledger_v2';
 
 export const AIOrchestrator = {
     /**
      * Centralized execution for all Gemini calls.
-     * Implements cost guards and usage tracking.
+     * Implements accurate token estimation and cost guards.
      */
     generateContent: async (params: GenerateContentParameters & { model: string }): Promise<GenerateContentResponse> => {
-        // 1. Safety Check: Usage Limit
-        const today = new Date().toDateString();
+        // 1. Safety Check: Daily Neural Energy
+        const now = new Date();
+        const todayKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        
         const rawUsage = localStorage.getItem(USAGE_KEY);
-        let ledger = rawUsage ? JSON.parse(rawUsage) : { date: today, used: 0 };
+        let ledger = rawUsage ? JSON.parse(rawUsage) : { date: todayKey, usedTokens: 0 };
 
-        if (ledger.date !== today) {
-            ledger = { date: today, used: 0 };
+        // Reset if new day detected
+        if (ledger.date !== todayKey) {
+            ledger = { date: todayKey, usedTokens: 0 };
         }
 
-        if (ledger.used > DAILY_LIMIT) {
+        if (ledger.usedTokens > APP_CONFIG.AI.DAILY_CHARACTER_LIMIT) {
             console.error("[Dojo AI] Daily energy limit reached.");
-            throw new Error("Sensei is resting. Daily neural energy depleted.");
+            throw new Error("Sensei is resting. Daily neural energy depleted. Try again tomorrow.");
         }
 
-        // 2. Initialize fresh client for every call (prevents key race conditions)
+        // 2. Initialize fresh client
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
         try {
-            // 3. Execute Strike
             const response = await ai.models.generateContent(params);
 
-            // 4. Record Usage (Approximate characters as tokens)
+            // 3. Record Usage with Improved Token Math
             const inputStr = typeof params.contents === 'string' ? params.contents : JSON.stringify(params.contents);
-            const characters = inputStr.length + (response.text?.length || 0);
+            const outputStr = response.text || "";
             
-            ledger.used += characters;
+            // Estimated tokens (chars * multiplier)
+            const estimatedTokens = Math.round((inputStr.length + outputStr.length) * APP_CONFIG.AI.TOKEN_MULTIPLIER);
+            
+            ledger.usedTokens += estimatedTokens;
             localStorage.setItem(USAGE_KEY, JSON.stringify(ledger));
 
             return response;
         } catch (error: any) {
-            console.error("[Dojo AI] Neural Error:", error);
+            console.error("[Dojo AI] Neural Strike Failed:", error);
             throw error;
         }
     }

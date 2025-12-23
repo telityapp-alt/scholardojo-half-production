@@ -88,15 +88,14 @@ export const ArenaDemo: React.FC<ArenaDemoProps> = ({ onExit }) => {
     const [isMuted, setIsMuted] = useState(false);
     const [isBossSpeaking, setIsBossSpeaking] = useState(false);
 
+    // FIX: Master Timers
+    /* Fix: replaced NodeJS.Timeout with any to resolve namespace error */
+    const demoTimerRef = useRef<any | null>(null);
+
     const speak = (text: string) => {
         if (isMuted) return;
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v => v.name.includes('Google US English') || v.lang === 'en-US');
-        if (preferredVoice) utterance.voice = preferredVoice;
-        utterance.rate = 0.95; 
-        utterance.pitch = 0.8; 
         utterance.onstart = () => setIsBossSpeaking(true);
         utterance.onend = () => setIsBossSpeaking(false);
         window.speechSynthesis.speak(utterance);
@@ -105,9 +104,9 @@ export const ArenaDemo: React.FC<ArenaDemoProps> = ({ onExit }) => {
     useEffect(() => {
         const intro = BATTLE_SCRIPT[0].bossTalk;
         setHistory([{ role: 'boss', text: intro }]);
-        const timer = setTimeout(() => speak(intro), 1000);
+        demoTimerRef.current = setTimeout(() => speak(intro), 1000);
         return () => {
-            clearTimeout(timer);
+            if (demoTimerRef.current) clearTimeout(demoTimerRef.current);
             window.speechSynthesis.cancel();
         };
     }, []);
@@ -116,7 +115,10 @@ export const ArenaDemo: React.FC<ArenaDemoProps> = ({ onExit }) => {
         if (isBossAttacking) return;
         setHistory(prev => [...prev, { role: 'ninja', text: option.text }]);
         setIsBossAttacking(true);
-        setTimeout(() => {
+        
+        if (demoTimerRef.current) clearTimeout(demoTimerRef.current);
+        
+        demoTimerRef.current = setTimeout(() => {
             setBossHp(prev => Math.max(0, prev - option.damage));
             
             const bossEntry = { 
@@ -131,9 +133,8 @@ export const ArenaDemo: React.FC<ArenaDemoProps> = ({ onExit }) => {
             speak(option.bossReaction);
             
             if (step === BATTLE_SCRIPT.length - 1) {
-                setTimeout(() => {
-                    const finalHistory = [...history, { role: 'ninja', text: option.text }, bossEntry];
-                    const bossOnly = finalHistory.filter(h => h.role === 'boss' && h.score !== undefined);
+                demoTimerRef.current = setTimeout(() => {
+                    const bossOnly = [...history, { role: 'ninja', text: option.text }, bossEntry].filter(h => h.role === 'boss' && h.score !== undefined);
                     const scores = bossOnly.map(h => h.score || 0);
                     const avg = scores.reduce((a, b) => a + b, 0) / (scores.length || 1);
                     
@@ -158,10 +159,9 @@ export const ArenaDemo: React.FC<ArenaDemoProps> = ({ onExit }) => {
                     setShowResults(true);
                 }, 2000);
             } else {
-                setTimeout(() => {
-                    const nextStep = step + 1;
-                    setStep(nextStep);
-                    const nextTalk = BATTLE_SCRIPT[nextStep].bossTalk;
+                demoTimerRef.current = setTimeout(() => {
+                    setStep(prev => prev + 1);
+                    const nextTalk = BATTLE_SCRIPT[step + 1].bossTalk;
                     setHistory(prev => [...prev, { role: 'boss', text: nextTalk }]);
                     speak(nextTalk);
                     setIsBossAttacking(false);
@@ -184,7 +184,6 @@ export const ArenaDemo: React.FC<ArenaDemoProps> = ({ onExit }) => {
 
     return (
         <div className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col p-4 md:p-8 overflow-hidden animate-in fade-in zoom-in duration-500">
-            {/* HUD */}
             <div className="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-6 mb-8 relative z-50">
                 <div className="flex-1 bg-black/40 backdrop-blur-xl p-6 rounded-[32px] border-2 border-white/10 border-b-[8px] relative overflow-hidden group">
                     <div className="flex justify-between items-end mb-3">
@@ -231,7 +230,6 @@ export const ArenaDemo: React.FC<ArenaDemoProps> = ({ onExit }) => {
                 </div>
             </div>
 
-            {/* Battle Stage */}
             <div className="max-w-6xl mx-auto w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch overflow-hidden">
                 <div className="lg:col-span-5 flex flex-col gap-6">
                     <div className="flex-1 bg-slate-950 rounded-[40px] border-b-[16px] border-black relative overflow-hidden group shadow-2xl">

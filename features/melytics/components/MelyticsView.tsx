@@ -1,18 +1,18 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { DomainType } from '../../../core/contracts/entityMap';
-import { UserFoundation, ArenaLog, AuditRecord } from '../types';
+import { UserFoundation } from '../types';
 import { MelyticsService } from '../services/melyticsService';
 import { AnalyticsRadar } from './AnalyticsRadar';
 import { 
-    Fingerprint, ShieldCheck, Zap, History, Trophy, Swords, 
+    Fingerprint, Zap, History, Trophy, Swords, 
     Clock, BrainCircuit, Bot, Activity, BarChart3, 
-    ChevronDown, ChevronUp, Star, CheckCircle2, AlertCircle, Sparkles,
-    FileText, Target, Database, Info, Lock
+    ChevronDown, ChevronUp, Star, CheckCircle2, 
+    FileText, Target, Database, Info, Sparkles, AlertCircle
 } from 'lucide-react';
-import { DossierService } from '../../target/services/dossierService';
 import { useLanguage } from '../../../core/hooks/useLanguage';
+import { useStorageSync } from '../../../core/hooks/useStorageSync';
 
 export const MelyticsView: React.FC = () => {
     const { domain } = useParams<{ domain: string }>();
@@ -22,17 +22,16 @@ export const MelyticsView: React.FC = () => {
     const [foundation, setFoundation] = useState<UserFoundation>(() => MelyticsService.getFoundation(domainEnum));
     const [expandedArena, setExpandedArena] = useState<string | null>(null);
 
-    useEffect(() => {
-        const load = () => setFoundation(MelyticsService.getFoundation(domainEnum));
-        window.addEventListener('storage', load);
-        return () => window.removeEventListener('storage', load);
+    const refresh = useCallback(() => {
+        setFoundation(MelyticsService.getFoundation(domainEnum));
     }, [domainEnum]);
 
-    // Derived: Current Active Dossier Stats (Linked from Command)
-    const activeDossier = useMemo(() => {
-        // In real app, we'd find the latest modified dossier
-        return null; 
-    }, []);
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    // High precision sync gate
+    useStorageSync(refresh);
 
     const matrixSummary = useMemo(() => {
         const s = foundation.scores;
@@ -75,13 +74,13 @@ export const MelyticsView: React.FC = () => {
                             </p>
                         </div>
                         
-                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                        <div className="flex flex-wrap justify-center md:justify-start gap-4">
                              <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3">
-                                <Activity size={18} className="text-red-400" />
+                                Activity size={18} className="text-red-400" />
                                 <div><p className="text-[8px] font-black uppercase text-slate-400">Total XP</p><p className="font-black text-sm">{foundation.auditHistory.length * 50 + foundation.arenaLogs.length * 200}</p></div>
                              </div>
                              <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3">
-                                <Trophy size={18} className="text-yellow-400" />
+                                Trophy size={18} className="text-yellow-400" />
                                 <div><p className="text-[8px] font-black uppercase text-slate-400">Victories</p><p className="font-black text-sm">{foundation.arenaLogs.filter(l => l.avgScore > 20).length}</p></div>
                              </div>
                         </div>
@@ -187,7 +186,7 @@ export const MelyticsView: React.FC = () => {
                                 className="p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-10 cursor-pointer hover:bg-slate-50/50 transition-colors"
                             >
                                 <div className="flex items-center gap-8">
-                                    <div className={`w-20 h-20 rounded-[32px] border-b-[8px] flex items-center justify-center text-white shrink-0 shadow-xl ${log.avgScore > 20 ? 'bg-yellow-400 border-yellow-600' : 'bg-red-500 border-red-700'}`}>
+                                    <div className={`w-20 h-20 rounded-[32px] border-b-[8px] flex items-center justify-center text-white shrink-0 shadow-xl ${log.avgScore > 20 ? 'bg-yellow-400 border-yellow-600' : 'bg-red-50 border-red-700'}`}>
                                         <Target size={40} strokeWidth={3} />
                                     </div>
                                     <div>

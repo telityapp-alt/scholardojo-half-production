@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckSquare, PlusCircle, LayoutGrid, Search, ArrowRight, ClipboardList } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdmissionService } from '../services/admissionService';
@@ -7,6 +7,7 @@ import { AdmissionApp } from '../types';
 import { AdmissionCard } from './AdmissionCard';
 import { AdmissionDetail } from './AdmissionDetail';
 import { DomainType } from '../../../core/contracts/entityMap';
+import { useStorageSync } from '../../../core/hooks/useStorageSync';
 
 export const AdmissionView: React.FC = () => {
     const { domain } = useParams<{ domain: string }>();
@@ -18,16 +19,19 @@ export const AdmissionView: React.FC = () => {
     const [selectedApp, setSelectedApp] = useState<AdmissionApp | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const loadApps = useCallback(() => {
+        const data = AdmissionService.getApps(currentDomain);
+        setApps(data);
+        setLoading(false);
+    }, [currentDomain]);
+
     useEffect(() => {
-        const loadApps = () => {
-            const data = AdmissionService.getApps(currentDomain);
-            setApps(data);
-            setLoading(false);
-        };
+        setLoading(true);
         loadApps();
-        window.addEventListener('storage', loadApps);
-        return () => window.removeEventListener('storage', loadApps);
-    }, [view, currentDomain]);
+    }, [loadApps, view]);
+
+    // Memory-safe cross-tab sync
+    useStorageSync(loadApps);
 
     const handleSelect = (app: AdmissionApp) => {
         setSelectedApp(app);
@@ -61,7 +65,6 @@ export const AdmissionView: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col animate-in fade-in duration-500 pb-20 max-w-5xl mx-auto px-4">
-            {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 shrink-0">
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 flex items-center gap-4 tracking-tighter italic uppercase">
@@ -83,7 +86,6 @@ export const AdmissionView: React.FC = () => {
                 </button>
             </div>
 
-            {/* Content Grid */}
             {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[1,2,3].map(i => <div key={i} className="h-32 bg-slate-100 rounded-[24px] animate-pulse" />)}
