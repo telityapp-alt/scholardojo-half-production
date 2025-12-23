@@ -36,7 +36,6 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({ parent, activeTab,
         let stateClasses = "";
         
         if (isActive) {
-             // SCOUT SPECIAL ACTIVE STATE - Now BLUE
              if (isScout) {
                  stateClasses = 'bg-sky-50 border-duo-blue text-duo-blue active:border-b-2 active:translate-y-[3px] shadow-sm';
              } else {
@@ -65,17 +64,17 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({ parent, activeTab,
             className={`${baseClasses} ${stateClasses}`}
           >
             {unlocked ? (
-                 <Icon className={`w-5 h-5 ${isActive ? 'fill-current' : isScout ? 'text-sky-400' : 'text-slate-400'}`} strokeWidth={2.5} />
+                 <Icon className={`w-5 h-5 ${isActive ? 'fill-current' : isScout ? 'text-sky-400' : 'text-slate-400'}`} strokeWidth={2} />
             ) : (
                  <Lock className="w-4 h-4" />
             )}
             
-            <span className="font-black text-sm tracking-tight uppercase">
+            <span className="font-bold text-sm tracking-tight uppercase">
               {label}
             </span>
 
             {isScout && (
-                <div className="absolute -top-3 -right-2 bg-sky-500 text-white text-[7px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-md flex items-center gap-0.5 z-[70] transform rotate-3">
+                <div className="absolute -top-3 -right-2 bg-sky-500 text-white text-[7px] font-bold px-2 py-0.5 rounded-full border-2 border-white shadow-md flex items-center gap-0.5 z-[70] transform rotate-3">
                     <Sparkles size={6} fill="currentColor" /> SCOUT
                 </div>
             )}

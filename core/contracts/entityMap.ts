@@ -42,6 +42,17 @@ export interface ProgramRequirement {
     mandatory: boolean;
 }
 
+export interface TargetMilestone {
+    id: string;
+    title: string;
+    desc: string;
+    icon: string;
+    status: 'LOCKED' | 'AVAILABLE' | 'COMPLETED';
+    type: 'IDENTITY' | 'SKILL' | 'ADMISSION' | 'ARENA' | 'SUBMIT';
+    linkPath: string;
+    integrationKey: string;
+}
+
 export interface GenericProgram {
     id: string;
     domain: DomainType;
@@ -145,8 +156,7 @@ export interface GenericVaultItem {
     
     location: string;
     requirements: ProgramRequirement[];
-    // Fix: Using any[] here to avoid circular dependency with TargetMilestone type in Target features
-    roadmap?: any[]; 
+    roadmap?: TargetMilestone[]; 
     
     sourceUrl?: string;
     documentUrl?: string;

@@ -30,7 +30,6 @@ export const DuoButton: React.FC<DuoButtonProps> = ({
 }) => {
   
   const getDynamicStyles = () => {
-    // If it's a domain-primary button, use the injected CSS variables
     const useVariable = themeColor === 'green' || themeColor === 'blue' || themeColor === 'orange' || themeColor === 'purple';
     
     if (useVariable && variant === 'primary') {
@@ -74,7 +73,7 @@ export const DuoButton: React.FC<DuoButtonProps> = ({
     }
   };
 
-  const baseStyles = "relative rounded-2xl font-black text-sm tracking-widest uppercase transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:pointer-events-none select-none";
+  const baseStyles = "relative rounded-2xl font-bold text-sm tracking-widest uppercase transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:pointer-events-none select-none";
   const sizeStyles = variant === 'navigation' ? 'py-2 px-3 pl-2' : 'py-4 px-6'; 
   const widthStyle = fullWidth ? "w-full" : "";
   const colorStyle = getColorClasses(variant as ButtonVariant, themeColor);
@@ -92,9 +91,9 @@ export const DuoButton: React.FC<DuoButtonProps> = ({
                 group-hover:border-slate-300 group-active:border-b-2 group-active:translate-y-[2px] transition-all
                 text-slate-400 group-hover:text-slate-600
             `}>
-                {isLoading ? <Loader2 className="animate-spin" size={20} strokeWidth={3} /> : (StartIcon && <StartIcon size={20} strokeWidth={3} />)}
+                {isLoading ? <Loader2 className="animate-spin" size={20} strokeWidth={2.5} /> : (StartIcon && <StartIcon size={20} strokeWidth={2.5} />)}
             </div>
-            <span className="text-slate-400 font-black uppercase text-xs tracking-widest group-hover:text-slate-600">
+            <span className="text-slate-400 font-bold uppercase text-xs tracking-widest group-hover:text-slate-600">
                 {children}
             </span>
         </button>
@@ -109,12 +108,12 @@ export const DuoButton: React.FC<DuoButtonProps> = ({
       {...props}
     >
       {isLoading ? (
-        <Loader2 className="animate-spin" size={iconSize} strokeWidth={3} />
+        <Loader2 className="animate-spin" size={iconSize} strokeWidth={2.5} />
       ) : (
         <>
-            {StartIcon && <StartIcon size={iconSize} strokeWidth={3} />}
+            {StartIcon && <StartIcon size={iconSize} strokeWidth={2.5} />}
             <span className="relative top-[-1px]">{children}</span>
-            {EndIcon && <EndIcon size={iconSize} strokeWidth={3} />}
+            {EndIcon && <EndIcon size={iconSize} strokeWidth={2.5} />}
         </>
       )}
     </button>

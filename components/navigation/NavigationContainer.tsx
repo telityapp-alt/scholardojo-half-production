@@ -61,25 +61,25 @@ export const NavigationContainer: React.FC = () => {
       <EcosystemSwitcher />
 
       {/* TOP NAVIGATION BAR - CLEANED & COMPACT */}
-      <div className="w-full px-4 pt-4 z-[3000] relative">
-        <div className="max-w-6xl mx-auto w-full">
-            <header className="flex flex-col gap-3">
-                <div className="bg-white rounded-[28px] border-2 border-slate-200 border-b-[6px] p-1.5 flex flex-col xl:flex-row items-center justify-between shadow-sm gap-2">
-                    <div className="w-full xl:w-auto flex flex-col md:flex-row items-center gap-2 md:gap-4">
+      <div className="w-full px-4 pt-2 z-[3000] relative">
+        <div className="max-w-5xl mx-auto w-full">
+            <header className="flex flex-col gap-2">
+                <div className="bg-white rounded-2xl border-2 border-slate-200 border-b-[4px] p-1 flex flex-col xl:flex-row items-center justify-between shadow-sm gap-1">
+                    <div className="w-full xl:w-auto flex flex-col md:flex-row items-center gap-1 md:gap-2">
                         <div className="relative shrink-0 w-full md:w-auto">
-                            <div className="flex items-center gap-2.5 p-1.5 rounded-2xl group cursor-default">
+                            <div className="flex items-center gap-2 p-1.5 rounded-2xl group cursor-default">
                                 <div className="relative group-hover:scale-110 transition-transform">
                                     <DuoIcon icon={currentDomain === 'docs' ? FileText : Swords} color={brand.icon as any} size="sm" />
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className={`text-xl font-display font-black tracking-tighter ${brand.text}`}>
+                                <div className="flex items-center gap-1">
+                                    <span className={`text-lg font-display font-bold tracking-tighter ${brand.text}`}>
                                         {currentDomain.charAt(0).toUpperCase() + currentDomain.slice(1)}<span className="text-slate-800">dojo</span>
                                     </span>
                                 </div>
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide shrink-0 px-2">
+                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide shrink-0 px-2">
                             {currentDomain !== 'docs' ? (
                                 <ParentMenuBar 
                                     domain={currentDomain} 
@@ -87,32 +87,24 @@ export const NavigationContainer: React.FC = () => {
                                     onParentChange={(p) => navigate(`/${currentDomain}/${p}/${availableParents.find(p_ => p_.id === p)?.defaultTab}`)} 
                                 />
                             ) : (
-                                <div className="px-3 py-1 bg-purple-50 text-purple-600 rounded-xl font-display font-black text-[9px] uppercase tracking-widest border-2 border-purple-100 border-b-4 shadow-sm">Studio Protocol</div>
+                                <div className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded-lg font-display font-bold text-[8px] uppercase tracking-widest border border-purple-100 border-b-2 shadow-sm">Studio Protocol</div>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 pr-2">
-                        <button 
-                            onClick={() => navigate('/landing')}
-                            className="p-1.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-slate-300 hover:text-sky-500 hover:bg-sky-50 transition-all active:scale-90"
-                            title="Mission Info"
-                        >
-                            <Info size={14} strokeWidth={3} />
-                        </button>
-
-                        <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0 pr-2">
+                        <div className="flex items-center gap-1">
                             <LanguageSwitcher />
                             <RegionSwitcher />
                         </div>
                         
-                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white rounded-xl border-2 border-slate-200 border-b-4 group transition-colors">
-                            <Flame className={`w-3.5 h-3.5 ${streak > 0 ? 'fill-orange-500 stroke-orange-600 animate-pulse-slow' : 'text-slate-200'}`} />
-                            <span className="font-black text-slate-400 group-hover:text-orange-500 text-[10px]">{streak}</span>
+                        <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-xl border-2 border-slate-200 border-b-2 group transition-colors">
+                            <Flame className={`w-3 h-3 ${streak > 0 ? 'fill-orange-500 stroke-orange-600' : 'text-slate-200'}`} />
+                            <span className="font-bold text-slate-400 text-[9px]">{streak}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white rounded-xl border-2 border-slate-200 border-b-4 group transition-colors">
-                            <Gem className={`w-3.5 h-3.5 ${gems > 0 ? 'fill-sky-400 stroke-sky-600' : 'text-slate-200'}`} />
-                            <span className="font-black text-slate-400 group-hover:text-sky-500 text-[10px]">{gems}</span>
+                        <div className="flex items-center gap-1 px-2 py-1 bg-white rounded-xl border-2 border-slate-200 border-b-2 group transition-colors">
+                            <Gem className={`w-3 h-3 ${gems > 0 ? 'fill-sky-400 stroke-sky-600' : 'text-slate-200'}`} />
+                            <span className="font-bold text-slate-400 text-[9px]">{gems}</span>
                         </div>
                     </div>
                 </div>
@@ -123,8 +115,8 @@ export const NavigationContainer: React.FC = () => {
         </div>
       </div>
 
-      <main className="px-4 pt-1 z-[10]">
-         <div className="max-w-6xl mx-auto">
+      <main className="px-2 pt-1 z-[10]">
+         <div className="max-w-5xl mx-auto">
             <TabContentRenderer tabId={currentTabId} componentKey={currentTabConfig.component} domain={currentDomain} detailId={detailId} />
          </div>
       </main>

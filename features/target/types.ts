@@ -1,20 +1,11 @@
-
-import { DomainType, GenericVaultItem, GenericProgram } from '../../core/contracts/entityMap';
+import { DomainType, GenericVaultItem, GenericProgram, TargetMilestone } from '../../core/contracts/entityMap';
 import { AdmissionApp } from '../admission/types';
 import { CurriculumMaster } from '../curriculum/types';
 
-export type MilestoneActionType = 'NAVIGATE' | 'ACTION' | 'MODAL';
+// Fix: Export TargetMilestone to resolve module export error in consuming widgets
+export { TargetMilestone };
 
-export interface TargetMilestone {
-    id: string;
-    title: string;
-    desc: string;
-    icon: string;
-    status: 'LOCKED' | 'AVAILABLE' | 'COMPLETED';
-    type: 'IDENTITY' | 'SKILL' | 'ADMISSION' | 'ARENA' | 'SUBMIT';
-    linkPath: string;
-    integrationKey: string;
-}
+export type MilestoneActionType = 'NAVIGATE' | 'ACTION' | 'MODAL';
 
 export interface TargetAnalysis {
     scholarship: {

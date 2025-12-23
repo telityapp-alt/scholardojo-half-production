@@ -1,6 +1,5 @@
 
-import { DomainType } from '../../core/contracts/entityMap';
-import { TargetMilestone } from '../target/types';
+import { DomainType, TargetMilestone } from '../../core/contracts/entityMap';
 
 export type RequirementStatus = 'PENDING' | 'VERIFIED' | 'UPLOADED' | 'MISSING';
 export type RequirementType = 'DOC' | 'ESSAY' | 'FIELD' | 'TASK';

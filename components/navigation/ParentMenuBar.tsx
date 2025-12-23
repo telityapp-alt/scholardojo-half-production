@@ -36,8 +36,8 @@ export const ParentMenuBar: React.FC<ParentMenuBarProps> = ({ domain, activePare
         // Use localized label
         const label = (t.navigation as any)[parent.id] || overrides.parentLabels[parent.id] || parent.label;
 
-        // Strip uppercase and italic, keep font-display
-        let baseClasses = "flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-b-[4px] transition-all font-display font-black text-[10px] tracking-tight active:border-b-2 active:translate-y-[2px] whitespace-nowrap shrink-0";
+        // Using font-bold (which is now SEMI-BOLD 600)
+        let baseClasses = "flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-b-[4px] transition-all font-display font-bold text-[10px] tracking-tight active:border-b-2 active:translate-y-[2px] whitespace-nowrap shrink-0";
         let colorClasses = "";
 
         if (isActive) {
@@ -59,7 +59,7 @@ export const ParentMenuBar: React.FC<ParentMenuBarProps> = ({ domain, activePare
             onClick={() => onParentChange(parent.id)}
             className={`${baseClasses} ${colorClasses}`}
           >
-            <Icon className={`w-3.5 h-3.5 ${isActive ? 'fill-current' : 'text-slate-300'}`} strokeWidth={3} />
+            <Icon className={`w-3.5 h-3.5 ${isActive ? 'fill-current' : 'text-slate-300'}`} strokeWidth={2.5} />
             <span className="hidden lg:inline">{label}</span>
           </button>
         );
