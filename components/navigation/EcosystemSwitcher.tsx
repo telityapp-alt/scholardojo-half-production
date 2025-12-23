@@ -2,24 +2,25 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DomainType } from '../../core/contracts/entityMap';
-import { Target, Briefcase, FileText, CheckCircle2, Swords, FlaskConical } from 'lucide-react';
+import { Target, Briefcase, FileText, CheckCircle2, Swords, FlaskConical, Lock } from 'lucide-react';
 
 export const EcosystemSwitcher: React.FC = () => {
     const navigate = useNavigate();
     const { domain } = useParams<{ domain: string }>();
     const currentDomain = (domain as DomainType) || DomainType.SCHOLAR;
+    const isIndo = localStorage.getItem('dojo_region') === 'id';
 
     const ECOSYSTEMS = [
-        { id: DomainType.SCHOLAR, label: 'Scholar Dojo', icon: Target, theme: { bg: 'bg-duo-blue', dark: 'border-duo-blueDark' } },
-        { id: DomainType.INTERN, label: 'Intern Dojo', icon: Briefcase, theme: { bg: 'bg-duo-orange', dark: 'border-orange-600' } },
-        { id: DomainType.COMPETITION, label: 'Tournament Arena', icon: Swords, theme: { bg: 'bg-duo-red', dark: 'border-duo-redDark' } },
-        { id: DomainType.RESEARCH, label: 'Research Lab', icon: FlaskConical, theme: { bg: 'bg-teal-500', dark: 'border-teal-700' } },
-        { id: DomainType.DOCS, label: 'Forge Studio', icon: FileText, theme: { bg: 'bg-duo-purple', dark: 'border-duo-purpleDark' } },
+        { id: DomainType.SCHOLAR, label: 'Scholar Dojo', icon: Target, theme: { bg: 'bg-duo-blue', dark: 'border-duo-blueDark' }, locked: false },
+        { id: DomainType.INTERN, label: 'Intern Dojo', icon: Briefcase, theme: { bg: 'bg-duo-orange', dark: 'border-orange-600' }, locked: false },
+        { id: DomainType.COMPETITION, label: 'Tournament Arena', icon: Swords, theme: { bg: 'bg-duo-red', dark: 'border-duo-redDark' }, locked: !isIndo },
+        { id: DomainType.RESEARCH, label: 'Research Lab', icon: FlaskConical, theme: { bg: 'bg-teal-500', dark: 'border-teal-700' }, locked: !isIndo },
+        { id: DomainType.DOCS, label: 'Forge Studio', icon: FileText, theme: { bg: 'bg-duo-purple', dark: 'border-duo-purpleDark' }, locked: false },
     ];
 
-    const handleSwitch = (d: DomainType) => {
-        if (d === currentDomain) return;
-        const path = d === DomainType.DOCS ? `/${d}/workspace/library` : `/${d}/workspace/home`;
+    const handleSwitch = (eco: any) => {
+        if (eco.id === currentDomain) return;
+        const path = eco.id === DomainType.DOCS ? `/${eco.id}/workspace/library` : `/${eco.id}/workspace/home`;
         navigate(path);
     };
 
@@ -31,20 +32,22 @@ export const EcosystemSwitcher: React.FC = () => {
                 return (
                     <div key={eco.id} className="pointer-events-auto group relative flex items-center justify-end">
                         <div className="mr-2 opacity-0 group-hover:opacity-100 group-hover:-translate-x-2 transition-all duration-300 pointer-events-none">
-                            <div className="bg-white border-2 border-slate-200 border-b-4 px-4 py-2 rounded-2xl shadow-xl">
+                            <div className="bg-white border-2 border-slate-200 border-b-4 px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2">
                                 <span className="font-display font-black text-[10px] text-slate-700 whitespace-nowrap uppercase tracking-wider">
                                     {eco.label}
                                 </span>
+                                {eco.locked && <Lock size={10} className="text-red-500" strokeWidth={3} />}
                             </div>
                         </div>
 
                         <button
-                            onClick={() => handleSwitch(eco.id)}
+                            onClick={() => handleSwitch(eco)}
                             className={`
                                 w-14 h-14 rounded-2xl border-2 transition-all duration-200 flex items-center justify-center relative
                                 ${isActive 
                                     ? `${eco.theme.bg} ${eco.theme.dark} border-b-[8px] cursor-default scale-110 shadow-lg` 
                                     : `bg-white border-slate-200 border-b-[6px] hover:border-slate-300 hover:-translate-y-1 active:border-b-2 active:translate-y-[4px] shadow-md`}
+                                ${eco.locked && !isActive ? 'grayscale opacity-50' : ''}
                             `}
                         >
                             <eco.icon 
@@ -55,6 +58,11 @@ export const EcosystemSwitcher: React.FC = () => {
                             {isActive && (
                                 <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 border-2 border-slate-100 shadow-sm">
                                     <CheckCircle2 size={12} className="text-duo-green" strokeWidth={4} />
+                                </div>
+                            )}
+                            {eco.locked && !isActive && (
+                                <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 border-2 border-white shadow-sm text-white">
+                                    <Lock size={8} strokeWidth={4} />
                                 </div>
                             )}
                         </button>

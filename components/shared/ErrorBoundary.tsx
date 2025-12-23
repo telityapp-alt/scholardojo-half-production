@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
 interface Props {
@@ -14,10 +14,10 @@ interface State {
 /**
  * ErrorBoundary
  * Standard React Error Boundary component to prevent whole-app crashes.
- * Fix: Explicitly using React.Component to ensure props and state are correctly inherited and typed.
  */
-export class ErrorBoundary extends React.Component<Props, State> {
-  // Fix: Explicitly defining state as a class field to resolve property errors.
+// Fix: Explicitly using Component from named imports to ensure props and state are correctly inherited and typed.
+export class ErrorBoundary extends Component<Props, State> {
+  // Fix: Initializing state as a class field with explicit type.
   public state: State = {
     hasError: false
   };
@@ -32,14 +32,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Fix: Using this.props correctly inherited from React.Component.
+    // Fix: Inherited this.props is now correctly recognized via Component import.
     console.error(`[Dojo ${this.props.featureName || 'Feature'} Error]`, error, errorInfo);
   }
 
   public render() {
     // Fix: Accessing state via this.state.
     if (this.state.hasError) {
-      // Fix: Accessing props via this.props.
+      // Fix: Accessing fallback from this.props.
       return this.props.fallback || (
         <div className="p-12 text-center bg-white rounded-[40px] border-4 border-dashed border-red-100 flex flex-col items-center">
             <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mb-6 border-b-4 border-red-100">
@@ -47,7 +47,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </div>
             <h3 className="text-2xl font-black text-slate-700 uppercase italic tracking-tighter">Feature Strike Failed</h3>
             <p className="text-slate-400 font-bold mt-2 max-w-sm mb-8">
-                {/* Fix: Accessing featureName from props correctly. */}
+                {/* Fix: Inherited this.props is now correctly recognized. */}
                 The {this.props.featureName || 'module'} encountered a neural misalignment.
             </p>
             <button 
@@ -60,7 +60,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Accessing children correctly from this.props.
+    // Fix: Inherited this.props.children is now correctly recognized.
     return this.props.children;
   }
 }

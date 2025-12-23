@@ -1,64 +1,106 @@
 
 import React from 'react';
-import { Swords, Trophy, Zap, Flame, Crown, Target, ArrowRight } from 'lucide-react';
+import { Swords, Trophy, Zap, Flame, Crown, Target, ArrowRight, BookOpen, Star, Filter } from 'lucide-react';
+import { RegionLocked } from '../../../components/shared/RegionLocked';
 
 export const CompetitionHome: React.FC = () => {
-    return (
-        <div className="space-y-12 pb-32 animate-in slide-in-from-bottom-6 duration-700 max-w-7xl mx-auto px-4">
-            {/* TOURNAMENT HERO - DARK THEME */}
-            <div className="bg-slate-950 rounded-[48px] border-b-[16px] border-black p-10 md:p-12 text-white relative overflow-hidden shadow-2xl group">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none"></div>
-                <div className="absolute -right-20 -bottom-20 opacity-10 group-hover:scale-110 transition-transform duration-[3000ms]">
-                    <Swords size={400} className="text-white" />
-                </div>
+    const isIndo = localStorage.getItem('dojo_region') === 'id';
+    
+    if (!isIndo) return <RegionLocked featureName="Kompetisi Dojo" />;
 
-                <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
-                    <div className="w-44 h-44 bg-red-600 rounded-[48px] border-b-[12px] border-red-800 flex items-center justify-center shadow-2xl animate-pulse-slow transform -rotate-3">
-                        <Trophy size={80} className="text-white fill-white/20" />
+    return (
+        <div className="space-y-6 pb-24 animate-in fade-in duration-500 max-w-6xl mx-auto px-4">
+            {/* HERO COMPACT */}
+            <div className="bg-duo-red rounded-[32px] border-b-[10px] border-duo-redDark p-6 text-white relative overflow-hidden shadow-lg group">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
+                <div className="relative z-10 flex items-center gap-6">
+                    <div className="w-16 h-16 bg-white rounded-2xl border-b-4 border-red-200 flex items-center justify-center text-duo-red shadow-xl shrink-0">
+                        <Trophy size={32} strokeWidth={2.5} />
                     </div>
-                    <div className="flex-1 text-center md:text-left">
-                        <div className="inline-flex items-center gap-2 bg-red-500/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-red-500/30 mb-6 font-black text-xs uppercase tracking-[0.3em] text-red-400">
-                             Live Qualifier Phase 1
-                        </div>
-                        <h1 className="text-5xl md:text-8xl font-black tracking-tighter uppercase italic leading-none mb-6">
-                            WAR <span className="text-red-500">ROOM</span>
+                    <div>
+                        <h1 className="font-display font-black text-2xl md:text-3xl tracking-tight uppercase leading-none mb-1">
+                            ARENA <span className="text-yellow-300">KOMPETISI</span>
                         </h1>
-                        <p className="text-xl font-bold text-slate-400 max-w-2xl leading-tight">
-                            Execute strategic strikes in world-class tournaments. Build your global bracket and claim the Crown.
-                        </p>
+                        <p className="text-xs font-bold text-red-50 opacity-90">Koleksi lomba elit & resep juara nasional.</p>
                     </div>
                 </div>
             </div>
 
-            {/* BATTLE STATS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* QUICK STATS - TIGHTER GRID */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                    { icon: Flame, color: 'bg-orange-500', label: 'BATTLE STREAK', value: '14 Days' },
-                    { icon: Crown, color: 'bg-yellow-400', label: 'TIER RANK', value: '#120 Global' },
-                    { icon: Zap, color: 'bg-red-500', label: 'POWER RATING', value: '2,450' }
+                    { icon: Flame, color: 'bg-orange-500', border: 'border-orange-700', label: 'STREAK', value: '14 Hari' },
+                    { icon: Crown, color: 'bg-yellow-400', border: 'border-yellow-600', label: 'RANK', value: '#120' },
+                    { icon: Zap, color: 'bg-red-500', border: 'border-red-700', label: 'POWER', value: '2.4k' },
+                    { icon: Trophy, color: 'bg-sky-500', border: 'border-sky-700', label: 'WINS', value: '3' }
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white rounded-[40px] border-2 border-slate-200 border-b-[12px] p-8 flex items-center gap-6 group hover:border-red-400 transition-all cursor-default">
-                        <div className={`w-16 h-16 rounded-2xl border-b-4 flex items-center justify-center text-white shadow-lg ${stat.color}`}>
-                            <stat.icon size={32} strokeWidth={3} />
+                    <div key={i} className="bg-white rounded-2xl border-2 border-slate-200 border-b-[6px] p-3 flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg border-b-2 flex items-center justify-center text-white shrink-0 ${stat.color} ${stat.border}`}>
+                            <stat.icon size={16} strokeWidth={3} />
                         </div>
-                        <div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">{stat.label}</p>
-                            <h3 className="text-3xl font-black text-slate-800">{stat.value}</h3>
+                        <div className="min-w-0">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
+                            <p className="font-black text-sm text-slate-700 leading-none truncate">{stat.value}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* LIVE BRACKET PLACEHOLDER */}
-            <div className="bg-white rounded-[48px] border-2 border-slate-100 border-b-[16px] p-12 text-center flex flex-col items-center">
-                 <div className="w-24 h-24 bg-slate-50 rounded-[32px] border-2 border-slate-200 flex items-center justify-center mb-8 shadow-inner">
-                    <Target size={48} className="text-slate-200" />
-                 </div>
-                 <h2 className="text-3xl font-black text-slate-300 uppercase tracking-[0.4em]">Empty Bracket</h2>
-                 <p className="text-slate-400 font-bold mt-4 max-w-sm mb-10">Scan a tournament brief in the explorer to initialize your first bracket strike.</p>
-                 <button className="px-10 py-5 bg-red-500 text-white rounded-3xl font-black text-xl border-b-[8px] border-red-700 active:translate-y-2 active:border-b-0 transition-all flex items-center gap-3">
-                    ENTER THE DEX <ArrowRight size={24} strokeWidth={4} />
-                 </button>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* LIST LOMBA (7 COL) */}
+                <div className="lg:col-span-7 space-y-4">
+                    <div className="flex items-center justify-between px-2">
+                        <h2 className="font-display font-black text-lg text-slate-700 uppercase italic tracking-tight">Lomba Terkini</h2>
+                        <button className="text-[9px] font-black uppercase text-sky-500 flex items-center gap-1">Filter <Filter size={10}/></button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        {[
+                            { title: "Hackathon Nasional Kominfo", host: "Kemenkominfo", prize: "Rp 50jt", tag: "Tech" },
+                            { title: "Business Plan Competition UI", host: "FEB UI", prize: "Rp 15jt", tag: "Business" },
+                        ].map((lomba, i) => (
+                            <div key={i} className="bg-white rounded-2xl border-2 border-slate-200 border-b-[6px] p-4 flex items-center justify-between group hover:border-red-300 transition-all cursor-pointer active:translate-y-[2px] active:border-b-2">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-slate-50 rounded-xl border-b-2 border-slate-100 flex items-center justify-center text-slate-300 group-hover:text-red-500 group-hover:bg-red-50 transition-all">
+                                        <Swords size={20} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h4 className="font-black text-sm text-slate-700 truncate">{lomba.title}</h4>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{lomba.host}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <span className="bg-green-100 text-green-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">{lomba.prize}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* TIPS & RESEP (5 COL) */}
+                <div className="lg:col-span-5 space-y-4">
+                     <h2 className="font-display font-black text-lg text-slate-700 uppercase italic tracking-tight px-2">Resep Juara</h2>
+                     <div className="bg-slate-900 rounded-[32px] border-b-[10px] border-black p-5 text-white relative overflow-hidden group shadow-md">
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')] opacity-10"></div>
+                        <div className="relative z-10 space-y-4">
+                            {[
+                                { icon: Star, title: "Formula Golden Hook", desc: "Cara membuat opening presentasi yang memikat juri dalam 30 detik." },
+                                { icon: BookOpen, title: "Anatomi Proposal Elit", desc: "Struktur proposal yang selalu tembus babak final." }
+                            ].map((tip, i) => (
+                                <div key={i} className="flex gap-4 p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group/tip">
+                                    <div className="w-8 h-8 rounded-lg bg-red-500 border-b-2 border-red-800 flex items-center justify-center shrink-0 group-hover/tip:rotate-6 transition-transform">
+                                        <tip.icon size={16} strokeWidth={3} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h5 className="font-black text-xs text-white mb-1 uppercase tracking-tight">{tip.title}</h5>
+                                        <p className="text-[10px] font-bold text-slate-400 leading-snug">{tip.desc}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            <button className="w-full py-3 bg-white text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] border-b-4 border-slate-300 active:translate-y-1 active:border-b-0 transition-all">Buka Semua Resep</button>
+                        </div>
+                     </div>
+                </div>
             </div>
         </div>
     );
