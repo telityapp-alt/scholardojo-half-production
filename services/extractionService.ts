@@ -1,9 +1,9 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { DomainType } from "../core/contracts/entityMap";
+import { AIOrchestrator } from "../core/engines/aiOrchestrator";
 
 export const scanBriefWithAI = async (input: string, domain: DomainType) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = 'gemini-3-flash-preview';
   const lang = localStorage.getItem('dojo_lang') || 'en';
 
@@ -18,8 +18,6 @@ export const scanBriefWithAI = async (input: string, domain: DomainType) => {
     - Requirements/Benefits must be FLAT objects with string values in ${lang.toUpperCase()}.
   `;
 
-  // Fix: Removed empty Type.OBJECT fields from schema to follow guidelines.
-  // The model will still return these fields in the JSON response as they are requested in the system instruction.
   const responseSchema = {
     type: Type.OBJECT,
     properties: {
@@ -37,7 +35,8 @@ export const scanBriefWithAI = async (input: string, domain: DomainType) => {
   };
 
   try {
-    const response = await ai.models.generateContent({
+    // SECURITY: Use AIOrchestrator instead of direct initialization
+    const response = await AIOrchestrator.generateContent({
       model,
       contents: `Context: ${domain} Dojo. Target Output Language: ${lang}\n\nRaw Content:\n${input}`,
       config: { systemInstruction, responseMimeType: "application/json", responseSchema }

@@ -1,16 +1,17 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedProgram, DocBrief } from '../../../programs/types';
 import { UnifiedProgramService } from '../../../programs/services/unifiedProgramService';
 import { DomainType } from '../../../../core/contracts/entityMap';
+import { APP_CONFIG } from '../../../../core/contracts/appConfig';
 import { 
-    X, Search, Target, Zap, Sparkles, ArrowRight, ShieldCheck, 
-    Globe, Trophy, Hash, Clock, FileText, ChevronLeft,
-    Filter, Layers, Star, BrainCircuit
+    X, Search, Target, Sparkles, ArrowRight, 
+    Globe, Trophy, Hash, FileText, ChevronLeft,
+    Layers, BrainCircuit
 } from 'lucide-react';
 
 interface Props {
-    domain: DomainType; // This will likely be 'docs' from the editor context
+    domain: DomainType; 
     onSelect: (p: UnifiedProgram, b: DocBrief | null) => void;
     onClose: () => void;
 }
@@ -22,11 +23,9 @@ export const MissionSelectorModal: React.FC<Props> = ({ domain, onClose, onSelec
     const [selectedProgram, setSelectedProgram] = useState<UnifiedProgram | null>(null);
     const [activeFilter, setActiveFilter] = useState('ALL');
 
-    React.useEffect(() => {
+    useEffect(() => {
         const load = async () => {
             setIsLoading(true);
-            // Docs Dojo is a cross-domain tool. 
-            // We need to look for secured missions in ALL primary domains (Scholar, Intern, Student)
             const domainsToSearch = [DomainType.SCHOLAR, DomainType.INTERN, DomainType.STUDENT];
             
             let aggregated: UnifiedProgram[] = [];
@@ -35,8 +34,8 @@ export const MissionSelectorModal: React.FC<Props> = ({ domain, onClose, onSelec
                 aggregated = [...aggregated, ...data];
             }
 
-            const securedIds = JSON.parse(localStorage.getItem('dojo_secured_missions') || '[]');
-            // Filter to only show what the user has "Secured"
+            // FIX: Using centralized storage key
+            const securedIds = JSON.parse(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.SECURED_MISSIONS) || '[]');
             const securedMissions = aggregated.filter(p => securedIds.includes(p.id));
             
             setAllPrograms(securedMissions);
@@ -90,15 +89,11 @@ export const MissionSelectorModal: React.FC<Props> = ({ domain, onClose, onSelec
                                 </div>
                                 {selectedProgram ? 'Select Mission Artifact' : 'Mission Target Hub'}
                             </h2>
-                            <p className="text-slate-400 font-bold text-xs md:text-sm mt-1">
-                                {selectedProgram ? `Targeting ${selectedProgram.title}` : 'Select your secured mission to sync Dojo AI context.'}
-                            </p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
                         {selectedProgram ? (
-                            /* Category Switcher in Modal (Mirror of DocsTab) */
                             <div className="bg-slate-100 p-1 rounded-2xl border-2 border-slate-200 flex gap-1 shadow-inner">
                                 {CATEGORIES.map(cat => (
                                     <button
@@ -124,7 +119,6 @@ export const MissionSelectorModal: React.FC<Props> = ({ domain, onClose, onSelec
                     </div>
                 </div>
 
-                {/* Stage 1: Mission Selection */}
                 {!selectedProgram ? (
                     <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 scrollbar-hide relative z-10">
                         {isLoading ? (
@@ -144,33 +138,19 @@ export const MissionSelectorModal: React.FC<Props> = ({ domain, onClose, onSelec
                                         <Hash size={10} className="text-sky-400 stroke-[4px]" />
                                         <span className="text-[10px] font-black tracking-widest">{p.id.slice(-3).toUpperCase()}</span>
                                     </div>
-                                    <div className="absolute bottom-3 right-3 bg-[#1cb0f6] px-3 py-1 rounded-xl text-[9px] font-black uppercase text-white border-b-2 border-sky-700 shadow-sm">{p.domain}</div>
                                 </div>
                                 <div className="p-6 flex-1 flex flex-col">
                                     <h3 className="text-xl font-black text-slate-700 leading-tight mb-2 truncate group-hover:text-sky-600 transition-colors">{p.title}</h3>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate mb-6">{p.organizer}</p>
                                     <div className="mt-auto pt-6 border-t-2 border-slate-50 flex items-center justify-between">
                                          <span className="text-[10px] font-black text-slate-400 uppercase">{p.shadowProtocol.docBriefs.length} Artifacts</span>
-                                         <span className="text-[10px] font-black text-sky-500 uppercase flex items-center gap-2 group-hover:translate-x-1 transition-transform">Target <ArrowRight size={14} strokeWidth={3}/></span>
+                                         <span className="text-[10px] font-black text-sky-50 uppercase flex items-center gap-2 group-hover:translate-x-1 transition-transform">Target <ArrowRight size={14} strokeWidth={3}/></span>
                                     </div>
                                 </div>
                             </div>
                         ))}
-                        
-                        {!isLoading && filteredPrograms.length === 0 && (
-                            <div className="md:col-span-3 py-32 text-center flex flex-col items-center gap-6">
-                                 <div className="w-24 h-24 bg-white rounded-[32px] border-b-[8px] border-slate-200 flex items-center justify-center text-slate-200 shadow-md">
-                                    <Trophy size={48} />
-                                 </div>
-                                 <h3 className="text-2xl font-black text-slate-300 uppercase tracking-[0.4em]">Desk Empty</h3>
-                                 <p className="font-bold text-slate-400 max-w-sm mx-auto leading-relaxed">
-                                     You haven't "Secured" any programs yet. Visit the **Explore** tab in Student, Intern, or Scholar Dojo to secure a target mission.
-                                 </p>
-                            </div>
-                        )}
                     </div>
                 ) : (
-                    /* Stage 2: Artifact Selection (EXACT MIRROR OF DOCS TAB) */
                     <div className="flex-1 overflow-y-auto p-10 scrollbar-hide relative z-10 space-y-10 bg-slate-50/50">
                         {filteredBriefs.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-10">
@@ -180,8 +160,6 @@ export const MissionSelectorModal: React.FC<Props> = ({ domain, onClose, onSelec
                                         onClick={() => { onSelect(selectedProgram, brief); onClose(); }}
                                         className="bg-white rounded-[48px] border-2 border-slate-200 border-b-[12px] p-8 space-y-6 group hover:border-[#ce82ff] transition-all cursor-pointer active:translate-y-[4px] active:border-b-4 flex flex-col h-full shadow-sm relative overflow-hidden"
                                     >
-                                        <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:scale-110 transition-transform"><Layers size={150}/></div>
-                                        
                                         <div className="flex justify-between items-start relative z-10">
                                             <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-purple-50 group-hover:text-purple-500 transition-all border-b-2">
                                                 <FileText size={28} />
@@ -190,32 +168,9 @@ export const MissionSelectorModal: React.FC<Props> = ({ domain, onClose, onSelec
                                                 <Sparkles size={10} fill="currentColor"/> AI Target Link
                                             </div>
                                         </div>
-
                                         <div className="flex-1 space-y-4 relative z-10">
-                                            <div>
-                                                <h4 className="text-2xl font-black text-slate-800 leading-tight mb-2 group-hover:text-purple-600 transition-colors">{brief.label}</h4>
-                                                <p className="text-sm font-bold text-slate-500 leading-relaxed italic line-clamp-3">
-                                                    "{brief.instructions}"
-                                                </p>
-                                            </div>
-
-                                            <div className="space-y-3 pt-2">
-                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Target size={12} className="text-red-400"/> Critical Checkpoints</p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {brief.aiAuditCriteria.slice(0, 4).map((c, i) => (
-                                                        <span key={i} className="bg-slate-50 text-slate-500 px-3 py-1.5 rounded-xl text-[9px] font-black border border-slate-100 group-hover:border-purple-200 group-hover:bg-purple-50 transition-all">
-                                                            {c}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-6 border-t-2 border-slate-50 relative z-10 mt-auto">
-                                            <div className="flex items-center justify-between text-[#ce82ff] font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
-                                                <span>Deploy AI Auditor</span>
-                                                <ArrowRight size={16} strokeWidth={4} />
-                                            </div>
+                                            <h4 className="text-2xl font-black text-slate-800 leading-tight mb-2 group-hover:text-purple-600 transition-colors">{brief.label}</h4>
+                                            <p className="text-sm font-bold text-slate-500 leading-relaxed italic line-clamp-3">"{brief.instructions}"</p>
                                         </div>
                                     </div>
                                 ))}
@@ -224,13 +179,11 @@ export const MissionSelectorModal: React.FC<Props> = ({ domain, onClose, onSelec
                             <div className="py-40 text-center flex flex-col items-center gap-6">
                                 <Search size={80} className="text-slate-100" />
                                 <h3 className="text-2xl font-black text-slate-300 uppercase tracking-widest">No Artifacts Found</h3>
-                                <p className="text-slate-400 font-bold">Try adjusting your filters above.</p>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Footer Center - Fixed Intelligence Status */}
                 <div className="p-8 bg-slate-950 border-t-4 border-black shrink-0 flex items-center justify-center gap-8 relative z-20 shadow-[0_-20px_50px_rgba(0,0,0,0.3)]">
                     <div className="flex items-center gap-6">
                         <div className="w-16 h-16 bg-[#1cb0f6] rounded-[24px] flex items-center justify-center text-white border-b-8 border-[#1899d6] shadow-xl transform -rotate-2">

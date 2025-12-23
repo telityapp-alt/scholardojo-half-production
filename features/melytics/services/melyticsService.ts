@@ -1,12 +1,13 @@
 
 import { DomainType } from '../../../core/contracts/entityMap';
 import { UserFoundation, ArenaLog, AuditRecord } from '../types';
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { SafeAccess } from '../../../core/access/baseAccess';
 import { ProfileAccess } from '../../../core/access/profileAccess';
+import { AIOrchestrator } from '../../../core/engines/aiOrchestrator';
+import { APP_CONFIG } from '../../../core/contracts/appConfig';
 
 const STORAGE_KEY = 'dojo_melytics_intelligence_v4';
-const CACHE_KEY = 'dojo_ai_cache_fingerprints';
 
 export const MelyticsService = {
     getFoundation: (domain: DomainType): UserFoundation => {
@@ -25,7 +26,6 @@ export const MelyticsService = {
             lastUpdated: new Date().toISOString()
         };
         
-        // Always sync basic identity from central DNA
         return {
             ...foundation,
             name: dna.name,
@@ -49,16 +49,15 @@ export const MelyticsService = {
     analyzeCv: async (text: string, domain: DomainType) => {
         const fingerprint = SafeAccess.getFingerprint(text);
         
-        const cacheRaw = localStorage.getItem(CACHE_KEY);
+        const cacheRaw = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AI_CACHE);
         const cache = cacheRaw ? JSON.parse(cacheRaw) : {};
         if (cache[fingerprint]) {
             return cache[fingerprint];
         }
 
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = 'gemini-3-flash-preview';
-        
         const systemInstruction = `Extract Ninja Matrix scores (0-100) and neural summary from Resume. Domain: ${domain}. NO DUMMY VALUES. If info missing, keep at 0.`;
+        
         const responseSchema = {
             type: Type.OBJECT,
             properties: {
@@ -75,20 +74,20 @@ export const MelyticsService = {
         };
 
         try {
-            const response = await ai.models.generateContent({
+            // SECURITY: Switched to AIOrchestrator to avoid API key exposure
+            const response = await AIOrchestrator.generateContent({
                 model,
                 contents: text,
                 config: { systemInstruction, responseMimeType: "application/json", responseSchema }
             });
-            const result = JSON.parse(response.text || "{}");
             
+            const result = JSON.parse(response.text || "{}");
             cache[fingerprint] = result;
-            localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+            localStorage.setItem(APP_CONFIG.STORAGE_KEYS.AI_CACHE, JSON.stringify(cache));
             
             return result;
         } catch (error) {
             console.error("AI Analysis failed", error);
-            // Defaulting to 0 on error, not dummy
             return { scores: { technical: 0, leadership: 0, resilience: 0, academic: 0, fit: 0, impact: 0 }, aiSummary: "Neural link unstable." };
         }
     },
@@ -96,10 +95,7 @@ export const MelyticsService = {
     addArenaLog: (domain: DomainType, log: ArenaLog, performanceBoost: Partial<UserFoundation['scores']>) => {
         const foundation = MelyticsService.getFoundation(domain);
         foundation.arenaLogs = [log, ...foundation.arenaLogs]; 
-        
-        // Use ProfileAccess to update central DNA scores
         ProfileAccess.updateScores(domain, performanceBoost);
-        
         foundation.lastUpdated = new Date().toISOString();
         MelyticsService.saveFoundation(foundation);
     }

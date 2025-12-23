@@ -1,10 +1,10 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { AdmissionRequirement } from "../../admission/types";
+import { AIOrchestrator } from "../../../core/engines/aiOrchestrator";
 
 export const DocumentService = {
     analyzeContent: async (req: AdmissionRequirement, missionName: string): Promise<{ score: number, feedback: string[], status: string }> => {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = 'gemini-3-flash-preview';
 
         const systemInstruction = `
@@ -21,7 +21,8 @@ export const DocumentService = {
         `;
 
         try {
-            const response = await ai.models.generateContent({
+            // SECURITY: Using centralized AIOrchestrator
+            const response = await AIOrchestrator.generateContent({
                 model,
                 contents: `USER DOCUMENT CONTENT:\n\n${req.content || ''}`,
                 config: { 

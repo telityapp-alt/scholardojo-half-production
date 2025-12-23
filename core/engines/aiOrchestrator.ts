@@ -1,14 +1,15 @@
 
-import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { APP_CONFIG } from '../contracts/appConfig';
 
+/**
+ * AIOrchestrator
+ * The absolute master gateway for all AI interactions in the Dojo.
+ * Ensures security by being the ONLY place where GoogleGenAI is initialized.
+ */
 export const AIOrchestrator = {
-    /**
-     * Centralized execution for all Gemini calls.
-     * Implements accurate token estimation and cost guards.
-     */
-    generateContent: async (params: GenerateContentParameters & { model: string }): Promise<GenerateContentResponse> => {
-        // 1. Safety Check: Daily Neural Energy
+    generateContent: async (params: { model: string; contents: any; config?: any }): Promise<GenerateContentResponse> => {
+        // 1. Daily Neural Energy Check
         const now = new Date();
         const todayKey = now.toISOString().split('T')[0];
         
@@ -23,13 +24,19 @@ export const AIOrchestrator = {
             throw new Error("Sensei is resting. Daily neural energy depleted. Try again tomorrow.");
         }
 
-        // 2. Initialize fresh client
+        // 2. Encapsulated Initialization
+        // process.env.API_KEY is handled externally.
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
         try {
-            const response = await ai.models.generateContent(params);
+            // 3. SDK Execution
+            const response = await ai.models.generateContent({
+                model: params.model,
+                contents: params.contents,
+                config: params.config
+            });
 
-            // 3. Record Usage
+            // 4. Token & Usage Analysis
             const inputStr = typeof params.contents === 'string' ? params.contents : JSON.stringify(params.contents);
             const outputStr = response.text || "";
             const estimatedTokens = Math.round((inputStr.length + outputStr.length) * APP_CONFIG.AI.TOKEN_MULTIPLIER);
@@ -39,7 +46,10 @@ export const AIOrchestrator = {
 
             return response;
         } catch (error: any) {
-            // Pruned console logs for production readiness
+            // Check for requested entity not found error (API key selection state)
+            if (error.message?.includes("Requested entity was not found")) {
+                 console.error("[Neural Link] Key selection mismatch.");
+            }
             throw error;
         }
     }

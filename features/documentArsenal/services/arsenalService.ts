@@ -1,7 +1,8 @@
 
 import { DomainType } from '../../../core/contracts/entityMap';
 import { DocumentBlueprint } from '../types';
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
+import { AIOrchestrator } from '../../../core/engines/aiOrchestrator';
 
 const MOCK_BLUEPRINTS: DocumentBlueprint[] = [
     {
@@ -28,31 +29,6 @@ const MOCK_BLUEPRINTS: DocumentBlueprint[] = [
             focus: 'Social Impact over personal gain',
             rejectionTriggers: ['Arrogance', 'Vague goals', 'Only focusing on GPA']
         }
-    },
-    {
-        id: 'openai-technical-cv',
-        programId: 'openai-fellow-2025',
-        domain: DomainType.INTERN,
-        category: 'CV',
-        title: 'Elite Technical Resume (AI)',
-        brief: 'Focus on GPU kernels, scaling laws, and Open Source contributions. Traditional SWE resumes will fail here.',
-        checkpoints: [
-            { id: 'tc1', label: 'Arxiv/Paper Links', reason: 'Theoretical grounding must be verifiable.', weight: 10 },
-            { id: 'tc2', label: 'Contribution Metrics', reason: 'PRs to PyTorch or Transformers repo.', weight: 10 },
-            { id: 'tc3', label: 'Compute Scale', reason: 'Have you worked with 100+ GPU clusters?', weight: 8 }
-        ],
-        keywords: ['CUDA', 'FlashAttention', 'Optimization', 'Large-scale'],
-        artifacts: [
-            { 
-                id: 'art-2', title: 'OpenAI Fellow CV (2024)', description: 'Perfect structure for research fellows.', 
-                url: 'https://www.africau.edu/images/default/sample.pdf', alumniName: 'Kevin X.', alumniYear: '2024', keyHighlight: 'Technical Stack integrated into Project section.'
-            }
-        ],
-        aiContext: {
-            tone: 'Scientific, Concise, Impact-driven',
-            focus: 'Low-level AI implementation',
-            rejectionTriggers: ['Vague descriptions', 'Prompt Engineering focus only']
-        }
     }
 ];
 
@@ -61,17 +37,10 @@ export const ArsenalService = {
         return MOCK_BLUEPRINTS.filter(b => b.programId === programId);
     },
 
-    /**
-     * Finds a specific blueprint for a requirement, either by exact matching or category.
-     */
     getBlueprintForRequirement: (programId: string, requirementId: string): DocumentBlueprint | undefined => {
         const programBlueprints = ArsenalService.getBlueprintsByProgram(programId);
-        
-        // 1. Try exact match (e.g. 'cv' or 'essay_motlet')
         const exact = programBlueprints.find(b => b.id.includes(requirementId));
         if (exact) return exact;
-
-        // 2. Try category match (CV, ESSAY, etc)
         const cat = requirementId.split('_')[0].toUpperCase();
         return programBlueprints.find(b => b.category === cat);
     },
@@ -85,7 +54,6 @@ export const ArsenalService = {
     },
 
     auditDocument: async (content: string, blueprint: DocumentBlueprint) => {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = 'gemini-3-flash-preview';
 
         const systemInstruction = `
@@ -113,7 +81,8 @@ export const ArsenalService = {
         `;
 
         try {
-            const response = await ai.models.generateContent({
+            // SECURITY: Switched to AIOrchestrator
+            const response = await AIOrchestrator.generateContent({
                 model,
                 contents: `DOCUMENT CONTENT:\n\n${content}`,
                 config: { 

@@ -1,16 +1,15 @@
 
-import { GoogleGenAI } from "@google/genai";
 import { UnifiedProgram } from "../../programs/types";
+import { AIOrchestrator } from "../../../core/engines/aiOrchestrator";
 
 export const DocAiEngine = {
     /**
-     * Executes a high-fidelity audit using real program context.
+     * Executes a high-fidelity audit using real program context via AIOrchestrator.
      */
     auditWithContext: async (content: string, program: UnifiedProgram, docType: string) => {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = 'gemini-3-flash-preview';
 
-        // 1. Precise matching logic: find the correct brief for this artifact
+        // Precise matching logic: find the correct brief for this artifact
         const brief = program.shadowProtocol.docBriefs.find(b => 
             b.id.toLowerCase().includes(docType.toLowerCase()) || 
             docType.toLowerCase().includes(b.id.toLowerCase())
@@ -30,14 +29,15 @@ export const DocAiEngine = {
         `;
 
         try {
-            const res = await ai.models.generateContent({
+            // SECURITY: Call centralized orchestrator
+            const res = await AIOrchestrator.generateContent({
                 model,
                 contents: content,
                 config: { systemInstruction }
             });
             return { verdict: res.text || "Neural link stable.", score: 85 };
         } catch (e) {
-            return { error: "Neural link lost. Ensure API key is active." };
+            return { error: "Neural link lost. Ensure the strike is valid." };
         }
     }
 };

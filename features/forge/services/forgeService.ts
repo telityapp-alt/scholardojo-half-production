@@ -1,6 +1,8 @@
 
 import { DomainType, ProgramTier, GenericProgram, GenericVaultItem } from '../../../core/contracts/entityMap';
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
+import { AIOrchestrator } from '../../../core/engines/aiOrchestrator';
+import { APP_CONFIG } from '../../../core/contracts/appConfig';
 
 export interface MasterProgram {
     id: string;
@@ -16,13 +18,9 @@ export interface MasterProgram {
     tier: ProgramTier;
     difficultyLevel: string;
     applyUrl: string;
-    
-    // Added for mapping support
     dojoRankRequired?: string;
     senseiProtocolQuote?: string;
     dossierRequirementKeys?: string[];
-
-    // 1. Intel (Brief)
     intel: {
         description: string;
         highlights: string[];
@@ -36,33 +34,26 @@ export interface MasterProgram {
         timeline: any;
         financialValue: any;
         obligations: any;
+        documents?: any[];
     };
-
-    // 2. Shadow Protocol (Keys)
     shadowProtocol: {
         expertVerdict: string;
         lethalMistakes: { title: string; reason: string }[];
         successVault: { id: string; title: string; category: string; previewUrl: string; senseiComment: string }[];
         alumniInsights: any[];
         ghostTasks: { label: string; importance: string }[];
+        docBriefs?: any[];
+        cheatSheet?: any;
     };
-
-    // 3. Admission
     checklist: { id: string; label: string; estimate: string; subTasks: any[] }[];
     monthlyRoadmap: { month: string; tasks: string[] }[];
-
-    // 4. Arsenal (Blueprints)
     blueprints: any[];
-
-    // 5. Roadmap (Curriculum)
     curriculum: any;
-
-    // 6. Arena
     arenaInstructions: string;
     battleQuestions: any[];
 }
 
-const STORE_KEY = 'dojo_forge_master_v6';
+const STORE_KEY = APP_CONFIG.STORAGE_KEYS.FORGE_MASTER;
 
 export const ForgeService = {
     getAll: (): MasterProgram[] => JSON.parse(localStorage.getItem(STORE_KEY) || '[]'),
@@ -80,10 +71,6 @@ export const ForgeService = {
         window.dispatchEvent(new Event('storage'));
     },
     
-    /**
-     * Fix: Added forge method to resolve 'forge' does not exist on ForgeService error.
-     * This method uses AI to extract a full MasterProgram from raw briefing text.
-     */
     forge: async (input: string, domain: DomainType): Promise<MasterProgram> => {
         const schema = {
             type: Type.OBJECT,
@@ -109,11 +96,7 @@ export const ForgeService = {
                         strategicWants: { type: Type.ARRAY, items: { type: Type.STRING } },
                         fundingStatus: { type: Type.STRING },
                         weights: { type: Type.OBJECT, properties: { academic: { type: Type.NUMBER }, assets: { type: Type.NUMBER }, matrix: { type: Type.NUMBER } } },
-                        stats: { type: Type.OBJECT, properties: { awardeesPerYear: { type: Type.STRING }, acceptanceRate: { type: Type.STRING }, totalApplicants: { type: Type.NUMBER }, selectivityRatio: { type: Type.STRING }, targetKeywords: { type: Type.ARRAY, items: { type: Type.STRING } }, minGpa: { type: Type.NUMBER }, nationalityQuota: { type: Type.STRING } } },
-                        partnerInstitutions: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, location: { type: Type.STRING }, rank: { type: Type.STRING }, deptStats: { type: Type.STRING } } } },
-                        timeline: { type: Type.OBJECT, properties: { openDate: { type: Type.STRING }, docDeadline: { type: Type.STRING }, selectionPeriod: { type: Type.STRING }, resultEstimate: { type: Type.STRING }, interviewWindow: { type: Type.STRING } } },
-                        financialValue: { type: Type.OBJECT, properties: { tuition: { type: Type.STRING }, living: { type: Type.STRING }, flights: { type: Type.STRING }, totalValue: { type: Type.STRING } } },
-                        obligations: { type: Type.OBJECT, properties: { bondYears: { type: Type.NUMBER }, returnPolicy: { type: Type.STRING }, expectedContribution: { type: Type.STRING }, sanctionWarning: { type: Type.STRING } } }
+                        stats: { type: Type.OBJECT, properties: { awardeesPerYear: { type: Type.STRING }, acceptanceRate: { type: Type.STRING }, totalApplicants: { type: Type.NUMBER }, selectivityRatio: { type: Type.STRING }, targetKeywords: { type: Type.ARRAY, items: { type: Type.STRING } }, minGpa: { type: Type.NUMBER }, nationalityQuota: { type: Type.STRING } } }
                     }
                 },
                 shadowProtocol: {
@@ -121,14 +104,9 @@ export const ForgeService = {
                     properties: {
                         expertVerdict: { type: Type.STRING },
                         lethalMistakes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, reason: { type: Type.STRING } } } },
-                        successVault: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { id: { type: Type.STRING }, title: { type: Type.STRING }, category: { type: Type.STRING }, previewUrl: { type: Type.STRING }, senseiComment: { type: Type.STRING } } } },
                         ghostTasks: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { label: { type: Type.STRING }, importance: { type: Type.STRING } } } }
                     }
-                },
-                checklist: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { id: { type: Type.STRING }, label: { type: Type.STRING }, estimate: { type: Type.STRING } } } },
-                monthlyRoadmap: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { month: { type: Type.STRING }, tasks: { type: Type.ARRAY, items: { type: Type.STRING } } } } },
-                arenaInstructions: { type: Type.STRING },
-                battleQuestions: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { id: { type: Type.STRING }, text: { type: Type.STRING }, expectedPoints: { type: Type.ARRAY, items: { type: Type.STRING } } } } }
+                }
             }
         };
         const result = await ForgeService.callAI(`FORGE COMPLETE MASTER OBJECT FOR ${domain} MISSION:\n${input}`, schema);
@@ -145,8 +123,8 @@ export const ForgeService = {
     },
 
     callAI: async (prompt: string, schema: any) => {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
+        // SECURITY: Redirecting to AIOrchestrator
+        const response = await AIOrchestrator.generateContent({
             model: 'gemini-3-pro-preview',
             contents: prompt,
             config: { 

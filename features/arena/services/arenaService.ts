@@ -1,7 +1,8 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { ArenaQuestion, ArenaDifficulty } from '../types';
 import { DomainType, GenericVaultItem, GenericProgram } from '../../../core/contracts/entityMap';
+import { AIOrchestrator } from "../../../core/engines/aiOrchestrator";
 
 export const ArenaService = {
     generateBattleSet: async (
@@ -13,8 +14,6 @@ export const ArenaService = {
         difficulty: ArenaDifficulty,
         language: 'en' | 'id'
     ): Promise<ArenaQuestion[]> => {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
         const boardContext = targetItem 
             ? `BOARD DATA: ${targetItem.title}. HOST: ${targetItem.hostName}. DESC: ${targetItem.description}.` 
             : "GENERAL DOJO CHALLENGE";
@@ -22,7 +21,6 @@ export const ArenaService = {
         const systemInstruction = `
             You are the "Arena Boss Architect". 
             Generate a set of 5 increasingly difficult interview questions.
-            
             LANGUAGE: Respond strictly in ${language === 'id' ? 'BAHASA INDONESIA' : 'ENGLISH'}.
             
             MISSION CONTEXT:
@@ -54,7 +52,8 @@ export const ArenaService = {
         };
 
         try {
-            const response = await ai.models.generateContent({
+            // SECURITY: Call AIOrchestrator
+            const response = await AIOrchestrator.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: `Initiate battle set for ${language === 'id' ? 'misi' : 'mission'}: ${manualObjective || curriculumTitle}`,
                 config: { systemInstruction, responseMimeType: "application/json", responseSchema }
@@ -67,7 +66,6 @@ export const ArenaService = {
     },
 
     evaluateAnswer: async (question: string, answer: string, expected: string[], language: 'en' | 'id'): Promise<{ score: number; feedback: string; weaknesses?: string[]; improvements?: string[] }> => {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const systemInstruction = `
             Evaluate answer in ${language === 'id' ? 'BAHASA INDONESIA' : 'ENGLISH'}. 
             Score 5-30 (Damage to Boss).
@@ -78,13 +76,14 @@ export const ArenaService = {
             Return JSON: { 
                 "score": number, 
                 "feedback": string, 
-                "weaknesses": string[], // List specific errors/lacks
-                "improvements": string[] // List specific steps to fix
+                "weaknesses": string[], 
+                "improvements": string[] 
             }
         `;
 
         try {
-            const response = await ai.models.generateContent({
+            // SECURITY: Call AIOrchestrator
+            const response = await AIOrchestrator.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: `Q: ${question}\nUser: ${answer}`,
                 config: { systemInstruction, responseMimeType: "application/json" }
