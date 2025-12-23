@@ -1,0 +1,9 @@
+{
+  "name": "revision Copy of Copy of www.scholardojo.ai",
+  "description": "A unified platform for Student, Intern, and Scholar domains with AI-powered multimodal event scanning and Duo-style gamification.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
